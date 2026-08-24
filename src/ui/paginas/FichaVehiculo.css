@@ -396,3 +396,51 @@
 .ficha__aldia .lista-vencimientos {
   margin-top: var(--e-2);
 }
+
+/* --------------------------------------------------------------------------
+ * Análisis de costes
+ * ------------------------------------------------------------------------ */
+
+.ficha__analisis {
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.ficha__analisis h2 {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+  margin-bottom: var(--e-3);
+}
+
+.ficha__analisis-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--e-4);
+}
+
+.dato__apunte {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+/* Una cifra incompleta se anuncia: enseñarla sin más sería mentir por omisión. */
+.ficha__aviso-datos {
+  margin-top: var(--e-3);
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-aviso-fondo);
+  border: 1px solid var(--c-aviso-borde);
+  color: var(--c-aviso);
+  font-size: var(--t-sm);
+}
+
+/* En el panel, repostar y anotar kilómetros van uno al lado del otro. */
+.panel-tarjeta__acciones {
+  display: flex;
+  gap: var(--e-2);
+}

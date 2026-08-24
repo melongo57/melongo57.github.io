@@ -4,7 +4,9 @@ import { Ajustes } from './paginas/Ajustes.tsx';
 import { FichaVehiculo } from './paginas/FichaVehiculo.tsx';
 import { FormularioVehiculo } from './paginas/FormularioVehiculo.tsx';
 import { ListaVehiculos } from './paginas/ListaVehiculos.tsx';
+import { Gastos } from './paginas/Gastos.tsx';
 import { Mantenimientos } from './paginas/Mantenimientos.tsx';
+import { Repostajes } from './paginas/Repostajes.tsx';
 import { Reglas } from './paginas/Reglas.tsx';
 import { Panel } from './paginas/Panel.tsx';
 
@@ -26,6 +28,8 @@ export function App(): React.JSX.Element {
           <Route path="/vehiculos/:id/editar" element={<FormularioVehiculo />} />
           <Route path="/vehiculos/:id/mantenimientos" element={<Mantenimientos />} />
           <Route path="/vehiculos/:id/reglas" element={<Reglas />} />
+          <Route path="/vehiculos/:id/repostajes" element={<Repostajes />} />
+          <Route path="/vehiculos/:id/gastos" element={<Gastos />} />
           <Route path="/ajustes" element={<Ajustes />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

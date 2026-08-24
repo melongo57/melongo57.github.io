@@ -5,7 +5,7 @@ import { repo } from '@/datos/repositorioDexie.ts';
 import { CATEGORIAS_VEHICULO, COMBUSTIBLES } from '@/dominio/catalogos.ts';
 import { formatearEuros } from '@/dominio/dinero.ts';
 import { formatearDistancia, formatearFecha } from '@/dominio/fechas.ts';
-import { formatearKm } from '@/dominio/formato.ts';
+import { formatearConsumo, formatearCostePorKm, formatearKm } from '@/dominio/formato.ts';
 import { esEstimacion } from '@/dominio/odometro.ts';
 import type { OrigenLectura } from '@/dominio/tipos.ts';
 import { Boton, EnlaceBoton } from '../componentes/Boton.tsx';
@@ -13,7 +13,7 @@ import { FormularioLectura } from '../componentes/FormularioLectura.tsx';
 import { FotoVehiculo } from '../componentes/FotoVehiculo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
 import { ListaVencimientos } from '../componentes/ListaVencimientos.tsx';
-import { useDetalleVehiculo, useLecturas } from '../ganchos/consultas.ts';
+import { useAnalisis, useDetalleVehiculo, useLecturas } from '../ganchos/consultas.ts';
 import './FichaVehiculo.css';
 
 const ETIQUETA_ORIGEN: Record<OrigenLectura, string> = {
@@ -30,6 +30,7 @@ export function FichaVehiculo(): React.JSX.Element {
   const navegar = useNavigate();
   const detalle = useDetalleVehiculo(id);
   const lecturas = useLecturas(id);
+  const analisis = useAnalisis(id);
 
   const [registrando, setRegistrando] = useState(false);
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
@@ -215,18 +216,18 @@ export function FichaVehiculo(): React.JSX.Element {
       <section className="ficha__totales">
         <h2>Registrado hasta ahora</h2>
         <div className="ficha__totales-rejilla">
-          <div className="total">
+          <Link to={`/vehiculos/${v.id}/repostajes`} className="total total--enlace">
             <span className="total__valor numero">{totales.repostajes}</span>
             <span className="total__etiqueta">repostajes</span>
-          </div>
+          </Link>
           <Link to={`/vehiculos/${v.id}/mantenimientos`} className="total total--enlace">
             <span className="total__valor numero">{totales.mantenimientos}</span>
             <span className="total__etiqueta">mantenimientos</span>
           </Link>
-          <div className="total">
+          <Link to={`/vehiculos/${v.id}/gastos`} className="total total--enlace">
             <span className="total__valor numero">{totales.gastos}</span>
             <span className="total__etiqueta">gastos</span>
-          </div>
+          </Link>
           <div className="total">
             <span className="total__valor numero">{totales.documentos}</span>
             <span className="total__etiqueta">documentos</span>
@@ -237,6 +238,82 @@ export function FichaVehiculo(): React.JSX.Element {
           <strong className="numero">{formatearEuros(totales.gastadoCentimos)}</strong>
         </p>
       </section>
+
+      {analisis &&
+      (analisis.costeReciente.centimosPorKm !== null ||
+        analisis.consumos.some((c) => c.consumoMedio !== null)) ? (
+        <section className="ficha__analisis">
+          <h2>Lo que cuesta</h2>
+
+          <div className="ficha__analisis-rejilla">
+            {analisis.consumos
+              .filter((c) => c.consumoMedio !== null)
+              .map((c) => (
+                <div className="dato" key={c.unidad}>
+                  <span className="dato__etiqueta">
+                    Consumo {c.unidad === 'kWh' ? 'eléctrico' : 'medio'}
+                  </span>
+                  <span className="dato__valor numero">
+                    {formatearConsumo(c.consumoMedio!, c.unidad)}
+                  </span>
+                  <span className="dato__apunte">
+                    {c.tramos.length} {c.tramos.length === 1 ? 'tramo' : 'tramos'} de lleno a
+                    lleno
+                  </span>
+                </div>
+              ))}
+
+            {analisis.costeReciente.centimosPorKm !== null ? (
+              <div className="dato">
+                <span className="dato__etiqueta">Coste por km</span>
+                <span className="dato__valor numero">
+                  {formatearCostePorKm(analisis.costeReciente.centimosPorKm / 100)}
+                </span>
+                <span className="dato__apunte">últimos 12 meses</span>
+              </div>
+            ) : null}
+
+            {analisis.propiedad.centimosPorKm !== null &&
+            !analisis.propiedad.faltaPrecioCompra ? (
+              <div className="dato">
+                <span className="dato__etiqueta">Con la compra incluida</span>
+                <span className="dato__valor numero">
+                  {formatearCostePorKm(analisis.propiedad.centimosPorKm / 100)}
+                </span>
+                <span className="dato__apunte">coste total de propiedad</span>
+              </div>
+            ) : null}
+
+            <div className="dato">
+              <span className="dato__etiqueta">Al mes</span>
+              <span className="dato__valor numero">
+                {analisis.propiedad.centimosPorMes !== null
+                  ? formatearEuros(Math.round(analisis.propiedad.centimosPorMes))
+                  : '—'}
+              </span>
+              <span className="dato__apunte">
+                {analisis.propiedad.faltaPrecioCompra ? 'sin el precio de compra' : 'de media'}
+              </span>
+            </div>
+          </div>
+
+          {analisis.propiedad.faltaPrecioCompra ? (
+            <p className="ficha__aviso-datos">
+              Falta el precio de compra, así que el coste total de propiedad está incompleto.
+              Puedes añadirlo desde «Editar ficha».
+            </p>
+          ) : null}
+
+          {analisis.propiedad.registrosIncompletos ? (
+            <p className="ficha__aviso-datos">
+              Los registros empiezan el {formatearFecha(analisis.propiedad.cubreDesde)}, pero
+              el vehículo es tuyo desde antes. El coste con la compra incluida se reparte
+              entre todos esos kilómetros, así que sale <strong>más bajo de lo real</strong>:
+              tómalo como un mínimo.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* ------------------------------------------------------------------ */}
       <section className="ficha__historico">
@@ -285,8 +362,14 @@ export function FichaVehiculo(): React.JSX.Element {
 
       {/* ------------------------------------------------------------------ */}
       <section className="ficha__acciones">
+        <EnlaceBoton a={`/vehiculos/${v.id}/repostajes`} icono="⛽">
+          Repostajes
+        </EnlaceBoton>
         <EnlaceBoton a={`/vehiculos/${v.id}/mantenimientos`} icono="🔧">
           Mantenimientos
+        </EnlaceBoton>
+        <EnlaceBoton a={`/vehiculos/${v.id}/gastos`} icono="💶">
+          Gastos
         </EnlaceBoton>
         <EnlaceBoton a={`/vehiculos/${v.id}/editar`} icono="✎">
           Editar ficha

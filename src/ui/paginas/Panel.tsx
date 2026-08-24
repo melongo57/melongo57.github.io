@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatearEuros } from '@/dominio/dinero.ts';
 import { formatearDistancia, formatearMes, hoyISO, claveMes } from '@/dominio/fechas.ts';
-import { formatearKm } from '@/dominio/formato.ts';
+import { formatearConsumo, formatearKm } from '@/dominio/formato.ts';
 import { esEstimacion } from '@/dominio/odometro.ts';
 import type { Vehiculo } from '@/dominio/tipos.ts';
 import { Boton, EnlaceBoton } from '../componentes/Boton.tsx';
@@ -60,6 +60,9 @@ function TarjetaPanel({
 }): React.JSX.Element {
   const { vehiculo, estimacion, kmAlAnio, gastoDelMesCentimos, registrosDelMes, vencimientos } =
     resumen;
+  // Del hibrido enchufable se ensena la unidad principal; las dos caben en la
+  // ficha, pero en una tarjeta de panel compiten con todo lo demas.
+  const consumo = resumen.consumos.find((c) => c.consumoReciente !== null);
   const estimado = esEstimacion(estimacion);
   const restantes =
     vencimientos.vencidos + vencimientos.proximos - vencimientos.destacados.length;
@@ -102,9 +105,19 @@ function TarjetaPanel({
           </span>
         </div>
         <div>
-          <dt>Ritmo</dt>
-          <dd className="numero">{kmAlAnio > 0 ? formatearKm(kmAlAnio) : '—'}</dd>
-          <span className="panel-tarjeta__apunte">al año</span>
+          <dt>Consumo</dt>
+          <dd className="numero">
+            {consumo?.consumoReciente != null
+              ? formatearConsumo(consumo.consumoReciente, consumo.unidad)
+              : '—'}
+          </dd>
+          <span className="panel-tarjeta__apunte">
+            {consumo?.consumoReciente != null
+              ? 'reciente'
+              : kmAlAnio > 0
+                ? `${formatearKm(kmAlAnio)}/año`
+                : 'sin datos'}
+          </span>
         </div>
       </dl>
 
@@ -136,8 +149,16 @@ function TarjetaPanel({
       </section>
 
       <div className="panel-tarjeta__acciones">
-        <Boton variante="principal" icono="＋" ancho alPulsar={alRegistrarKm}>
-          Anotar kilómetros
+        <EnlaceBoton
+          a={`/vehiculos/${vehiculo.id}/repostajes`}
+          variante="principal"
+          icono="⛽"
+          ancho
+        >
+          Repostar
+        </EnlaceBoton>
+        <Boton icono="＋" ancho alPulsar={alRegistrarKm}>
+          Kilómetros
         </Boton>
       </div>
     </article>
