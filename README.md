@@ -4,9 +4,9 @@ Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimient
 aplicación web instalable que funciona sin conexión y guarda los datos en tu propio
 dispositivo.
 
-> **Estado: fase 3 de 7 completada.** Funcionan el panel con semáforo de vencimientos, el
-> alta y edición de vehículos, el registro de kilómetros y los mantenimientos con sus reglas
-> de recurrencia. Repostajes y gastos llegan en la fase 4.
+> **Estado: fase 4 de 7 completada.** Funcionan el panel con semáforo de vencimientos y
+> consumo real, el alta de vehículos, kilómetros, mantenimientos con recurrencias, repostajes
+> y gastos, con el coste por kilómetro. Las gráficas llegan en la fase 6.
 
 ## Arranque
 
@@ -104,6 +104,8 @@ src/
 │   └── ids.ts         UUID v4
 │   ├── odometro.ts    Estimación de kilometraje e interpolación
 │   ├── vencimientos.ts Motor de vencimientos y semáforo
+│   ├── consumo.ts     Consumo real de lleno a lleno
+│   ├── costes.ts      Coste por kilómetro y de propiedad
 │   └── validacion.ts  Reglas de entrada: errores frente a avisos
 ├── datos/       Persistencia.
 │   ├── db.ts               Esquema, índices y migraciones de IndexedDB
@@ -114,7 +116,7 @@ src/
 │   └── semilla.ts          Datos de ejemplo
 ├── ui/          React.
 │   ├── layout/        Armazón y navegación
-│   ├── paginas/       Panel, lista, ficha, mantenimientos, reglas, ajustes
+│   ├── paginas/       Panel, ficha, mantenimientos, repostajes, gastos, reglas
 │   ├── componentes/   Campos, botones, hoja modal
 │   └── ganchos/       Consultas reactivas sobre Dexie
 └── estilos/     Tokens de diseño, reinicio y piezas compartidas.
@@ -185,6 +187,56 @@ Por el mismo motivo, el orden va por **rangos** antes que por urgencia numérica
 vencido, luego lo próximo con fecha, después lo que falta por registrar, y al final lo que
 está al día. Un seguro que vence en veinte días es una tarea con fecha; un filtro sin anotar
 es solo un hueco en el histórico.
+
+### Consumo real: de lleno a lleno
+
+Un repostaje no dice cuánto has gastado: dice cuánto has metido. Solo cuando el depósito
+vuelve a estar lleno se sabe que lo repostado equivale exactamente a lo consumido desde el
+lleno anterior. Por eso un tramo de consumo va de un depósito lleno al siguiente, y **los
+repostajes parciales de en medio no se descartan: se suman al tramo**, porque ese
+combustible también se ha quemado.
+
+Dividir litros entre kilómetros repostaje a repostaje —que es lo que hace media internet—
+da cifras que bailan un 30 % según lo lleno que estuviera el depósito cada vez.
+
+La media es **ponderada por kilómetros**, no una media de medias: un tramo de 900 km dice
+más sobre el consumo real que uno de 200, y promediar los dos porcentajes por igual les
+daría el mismo peso.
+
+Cuando marcas un repostaje como «me salté alguno sin anotarlo», el tramo que termina ahí se
+descarta en lugar de dar una cifra imposible. Y donde no hay datos suficientes se devuelve
+`null`, no cero: cero significaría «no gasta nada», que es una mentira distinta de «todavía
+no lo sé».
+
+### El coste por kilómetro: el problema es el denominador
+
+Sumar gastos es trivial; decidir entre cuántos kilómetros se reparten no lo es. Dividir todo
+lo gastado entre los kilómetros de toda la vida del vehículo **subestima** el coste cuando
+llevas dos años registrando un coche que compraste hace siete: los gastos son de dos años y
+los kilómetros de siete.
+
+Por eso el kilometraje se mide sobre el mismo periodo que los gastos que se suman,
+interpolando el odómetro en las dos fechas. Y cuando eso no se puede evitar —el coste total
+de propiedad sí tiene que repartirse entre todos los kilómetros que has hecho con el
+coche— la app avisa de que la cifra es un mínimo, en lugar de enseñar un número creíble y
+falso.
+
+### Registrar un repostaje en menos de quince segundos
+
+Es un requisito explícito, y el formulario está construido a su alrededor:
+
+- **El importe va primero y grande.** Es lo único que siempre tienes delante, en el surtidor
+  y en el ticket.
+- **De los tres campos —litros, precio e importe— basta con dos.** El tercero se calcula
+  solo, y se recalcula si corriges uno de los otros.
+- **Los kilómetros vienen prerrellenados** con la estimación de hoy: normalmente solo hay
+  que corregir las decenas.
+- **La fecha es hoy y el depósito está lleno**, que es lo que pasa nueve de cada diez veces.
+- **Las estaciones que ya has usado salen como botones.** Escribir «Carrefour Majadahonda»
+  con una mano y el surtidor en la otra son cinco segundos perdidos.
+
+Todo lo raro —el repostaje parcial, la serie rota— existe, pero está plegado bajo «algo no
+cuadra» para que no estorbe en el caso normal.
 
 ### Errores frente a avisos
 
@@ -258,13 +310,20 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-184 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+246 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
 vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
 reglas de una sola dimensión, vehículos parados, antelaciones propias frente a las de
 ajustes, recurrencias personalizadas que no deben mezclarse), validación de entradas,
-integridad del repositorio y coherencia de los catálogos y los datos de ejemplo.
+el cálculo de consumo (repostajes parciales, series rotas, datos incompletos, medias
+ponderadas, híbridos enchufables), el coste por kilómetro y el de propiedad, integridad del
+repositorio y coherencia de los catálogos y los datos de ejemplo.
+
+Hay además tests que comprueban que **los datos de ejemplo son físicamente posibles**: que
+el consumo que sale del motor se parece al que se sembró. Cazaron un fallo real —tras un
+repostaje parcial, el siguiente no recuperaba lo que había faltado— que hacía que la app
+enseñara un consumo por debajo del real.
 
 ```bash
 npm test
@@ -275,7 +334,7 @@ npm test
 - [x] **Fase 1** — Estructura, stack, modelo de datos y datos de ejemplo
 - [x] **Fase 2** — CRUD de vehículos, registro de kilómetros y panel principal
 - [x] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
-- [ ] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
+- [x] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
 - [ ] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
 - [ ] **Fase 6** — Analíticas y gráficas
 - [ ] **Fase 7** — PWA completa: offline, instalable, exportación e importación
