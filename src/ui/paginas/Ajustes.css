@@ -1,0 +1,31 @@
+.ajustes {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.ajustes h1 {
+  font-size: var(--t-xl);
+  margin-bottom: var(--e-2);
+}
+
+.ajustes__texto {
+  color: var(--c-texto-suave);
+  font-size: var(--t-base);
+}
+
+.ajustes__aviso {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-aviso-fondo);
+  border: 1px solid var(--c-aviso-borde);
+  color: var(--c-aviso);
+  font-size: var(--t-sm);
+}
+
+.ajustes__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+}

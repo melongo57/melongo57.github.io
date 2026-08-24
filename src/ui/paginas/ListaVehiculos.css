@@ -1,0 +1,115 @@
+.lista-vehiculos {
+  max-width: 760px;
+}
+
+.lista-vehiculos__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-5);
+}
+
+.lista-vehiculos__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.lista-vehiculos__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.fila-vehiculo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-4);
+  padding: var(--e-3);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+  transition: border-color var(--transicion), transform var(--transicion);
+}
+
+.fila-vehiculo:hover {
+  border-color: var(--c-acento-borde);
+}
+
+.fila-vehiculo:active {
+  transform: scale(0.99);
+}
+
+.fila-vehiculo.es-vendido {
+  background: var(--c-superficie-2);
+}
+
+.fila-vehiculo__foto {
+  width: 104px;
+  flex-shrink: 0;
+}
+
+.fila-vehiculo__texto {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.fila-vehiculo__texto h2 {
+  font-size: var(--t-md);
+}
+
+.fila-vehiculo__texto p {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-vehiculo__meta {
+  color: var(--c-texto-tenue) !important;
+  font-size: var(--t-xs) !important;
+  margin-top: 2px;
+}
+
+.fila-vehiculo__estado {
+  flex-shrink: 0;
+  align-self: center;
+  white-space: nowrap;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie-3);
+  border: 1px solid var(--c-borde-fuerte);
+  color: var(--c-texto-tenue);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+.lista-vehiculos__vendidos {
+  margin-top: var(--e-6);
+}
+
+/*
+ * Hijo directo, no descendiente: `text-transform` se hereda, y un selector
+ * `.lista-vehiculos__vendidos h2` alcanzaba también el nombre de cada coche
+ * y lo escribía en mayúsculas.
+ */
+.lista-vehiculos__vendidos > h2 {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+}
+
+.lista-vehiculos__nota {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+  margin-bottom: var(--e-3);
+}
+
+@media (max-width: 480px) {
+  .fila-vehiculo__foto {
+    width: 84px;
+  }
+}

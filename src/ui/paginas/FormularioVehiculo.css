@@ -1,0 +1,96 @@
+.form-vehiculo {
+  max-width: 720px;
+}
+
+.form-vehiculo h1 {
+  font-size: var(--t-xl);
+  margin-bottom: var(--e-5);
+}
+
+.form-vehiculo form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+/* --------------------------------------------------------------------------
+ * Selector de foto
+ * ------------------------------------------------------------------------ */
+
+.foto-selector {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-4);
+  flex-wrap: wrap;
+}
+
+.foto-selector__vista,
+.foto-selector__hueco {
+  width: 132px;
+  aspect-ratio: 16 / 11;
+  border-radius: var(--r-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.foto-selector__hueco {
+  display: grid;
+  place-items: center;
+  font-size: var(--t-2xl);
+  background: var(--c-superficie-2);
+  border: 1px dashed var(--c-borde-fuerte);
+}
+
+.foto-selector__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-2);
+  flex: 1 1 200px;
+}
+
+.foto-selector__nota {
+  flex-basis: 100%;
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/* --------------------------------------------------------------------------
+ * Pie del formulario
+ * ------------------------------------------------------------------------ */
+
+.form-vehiculo__pie {
+  position: sticky;
+  bottom: calc(var(--e-8) + var(--seguro-abajo));
+  padding: var(--e-3);
+  background: color-mix(in srgb, var(--c-fondo) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+@media (min-width: 700px) {
+  .form-vehiculo__pie {
+    bottom: var(--e-4);
+  }
+}
+
+.form-vehiculo__confirmar,
+.form-vehiculo__fallo {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  border: 1px solid;
+  font-size: var(--t-sm);
+}
+
+.form-vehiculo__confirmar {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  color: var(--c-aviso);
+}
+
+.form-vehiculo__fallo {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}

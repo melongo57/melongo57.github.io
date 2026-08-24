@@ -1,0 +1,319 @@
+.ficha {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-5);
+}
+
+/* --------------------------------------------------------------------------
+ * Cabecera
+ * ------------------------------------------------------------------------ */
+
+.ficha__cabecera {
+  display: grid;
+  gap: var(--e-4);
+}
+
+@media (min-width: 560px) {
+  .ficha__cabecera {
+    grid-template-columns: 220px 1fr;
+    align-items: center;
+  }
+}
+
+.ficha__nombre {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+}
+
+.ficha__nombre h1 {
+  font-size: var(--t-xl);
+}
+
+.ficha__modelo {
+  color: var(--c-texto-suave);
+  margin-top: 2px;
+}
+
+.ficha__matricula {
+  display: inline-block;
+  margin-top: var(--e-2);
+  padding: 2px 10px;
+  border: 1.5px solid var(--c-borde-fuerte);
+  border-radius: var(--r-sm);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  font-size: var(--t-sm);
+}
+
+.ficha__congelado {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+  border: 1px solid var(--c-borde);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+/* --------------------------------------------------------------------------
+ * Kilometraje destacado
+ * ------------------------------------------------------------------------ */
+
+.ficha__destacado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e-2);
+  padding: var(--e-5) var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.ficha__km {
+  font-size: var(--t-3xl);
+  font-weight: 720;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.ficha__matiz {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.ficha__matiz.es-estimado::before {
+  content: '≈ ';
+  font-weight: 700;
+  color: var(--c-acento);
+}
+
+.ficha__destacado .boton {
+  margin-top: var(--e-3);
+}
+
+/* --------------------------------------------------------------------------
+ * Datos
+ * ------------------------------------------------------------------------ */
+
+.ficha__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: var(--e-4);
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dato--ancho {
+  grid-column: 1 / -1;
+}
+
+.dato__etiqueta {
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-texto-tenue);
+}
+
+.dato__valor {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ficha__notas,
+.ficha__totales,
+.ficha__historico {
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.ficha__notas h2,
+.ficha__totales h2,
+.ficha__historico h2 {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+  margin-bottom: var(--e-3);
+}
+
+.ficha__notas p {
+  color: var(--c-texto-suave);
+  white-space: pre-wrap;
+}
+
+.ficha__totales-rejilla {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--c-borde);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--e-3) 2px;
+  background: var(--c-superficie);
+}
+
+.total__valor {
+  font-size: var(--t-lg);
+  font-weight: 680;
+}
+
+.total__etiqueta {
+  font-size: 10px;
+  text-align: center;
+  color: var(--c-texto-tenue);
+}
+
+.ficha__gastado {
+  margin-top: var(--e-3);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.ficha__gastado strong {
+  font-size: var(--t-md);
+  color: var(--c-texto);
+}
+
+.ficha__sin-datos {
+  color: var(--c-texto-tenue);
+  font-size: var(--t-sm);
+}
+
+/* --------------------------------------------------------------------------
+ * Línea temporal de kilómetros
+ * ------------------------------------------------------------------------ */
+
+.linea-km {
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.linea-km__punto {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  padding: var(--e-3) 0 var(--e-3) var(--e-2);
+}
+
+/* Hilo que une los puntos. */
+.linea-km__punto::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--e-2) + 5px);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--c-borde);
+}
+
+.linea-km__punto:first-child::before {
+  top: 50%;
+}
+
+.linea-km__punto:last-child::before {
+  bottom: 50%;
+}
+
+.linea-km__marca {
+  position: relative;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie);
+  border: 2.5px solid var(--c-borde-fuerte);
+}
+
+.linea-km__punto:first-child .linea-km__marca {
+  border-color: var(--c-acento);
+  background: var(--c-acento);
+}
+
+.linea-km__cuerpo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.linea-km__km {
+  font-weight: 650;
+}
+
+.linea-km__meta {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.linea-km__notas {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+  margin-top: 2px;
+}
+
+.linea-km__borrar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-full);
+  color: var(--c-texto-tenue);
+}
+
+.linea-km__borrar:hover {
+  background: var(--c-alerta-fondo);
+  color: var(--c-alerta);
+}
+
+/* --------------------------------------------------------------------------
+ * Acciones y borrado
+ * ------------------------------------------------------------------------ */
+
+.ficha__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+}
+
+.borrado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.borrado__alternativa {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-acento-suave);
+  border: 1px solid var(--c-acento-borde);
+  color: var(--c-acento);
+  font-size: var(--t-sm);
+}

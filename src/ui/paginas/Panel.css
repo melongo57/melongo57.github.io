@@ -1,0 +1,156 @@
+.panel__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-5);
+}
+
+.panel__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.panel__mes {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/*
+ * En español el mes va en minúscula, pero abre frase. `capitalize` no vale:
+ * pondría en mayúscula cada palabra y daría «Agosto De 2026».
+ */
+.panel__mes::first-letter {
+  text-transform: uppercase;
+}
+
+.panel__rejilla {
+  display: grid;
+  gap: var(--e-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+}
+
+/* --------------------------------------------------------------------------
+ * Tarjeta de vehículo
+ * ------------------------------------------------------------------------ */
+
+.panel-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-1);
+}
+
+.panel-tarjeta.es-esqueleto {
+  min-height: 360px;
+  background: var(--c-superficie-2);
+  border-style: dashed;
+  box-shadow: none;
+  animation: latido 1.4s ease-in-out infinite;
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.panel-tarjeta__enlace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  border-radius: var(--r-md);
+}
+
+.panel-tarjeta__enlace:hover .panel-tarjeta__titulo h2 {
+  color: var(--c-acento);
+}
+
+.panel-tarjeta__titulo h2 {
+  font-size: var(--t-lg);
+  transition: color var(--transicion);
+}
+
+.panel-tarjeta__titulo p {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/* --- Cifra principal: el kilometraje --- */
+
+.panel-tarjeta__cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel-tarjeta__km {
+  font-size: var(--t-2xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.panel-tarjeta__matiz {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/*
+ * Una cifra estimada tiene que verse distinta de una medida. Si no, se acaba
+ * copiando en el formulario del taller como si fuera la buena.
+ */
+.panel-tarjeta__matiz.es-estimado::before {
+  content: '≈ ';
+  font-weight: 700;
+  color: var(--c-acento);
+}
+
+/* --- Datos secundarios --- */
+
+.panel-tarjeta__datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-3);
+  padding-block: var(--e-3);
+  border-block: 1px solid var(--c-borde);
+}
+
+.panel-tarjeta__datos dt {
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-texto-tenue);
+}
+
+.panel-tarjeta__datos dd {
+  font-size: var(--t-md);
+  font-weight: 650;
+  margin-top: 1px;
+}
+
+.panel-tarjeta__apunte {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+/* Hueco anunciado: mejor decir qué falta que dejar un blanco sospechoso. */
+.panel-tarjeta__pendiente {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--c-borde-fuerte);
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.panel-tarjeta__acciones {
+  margin-top: auto;
+}
+

@@ -1,0 +1,35 @@
+.form-lectura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.form-lectura__referencia {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.form-lectura__referencia strong {
+  color: var(--c-texto);
+}
+
+.form-lectura__confirmar {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-aviso-fondo);
+  border: 1px solid var(--c-aviso-borde);
+  color: var(--c-aviso);
+  font-size: var(--t-sm);
+}
+
+.form-lectura__fallo {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-alerta-fondo);
+  border: 1px solid var(--c-alerta-borde);
+  color: var(--c-alerta);
+  font-size: var(--t-sm);
+}

@@ -1,0 +1,183 @@
+.disposicion {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --------------------------------------------------------------------------
+ * Cabecera
+ * ------------------------------------------------------------------------ */
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: var(--seguro-arriba);
+  background: color-mix(in srgb, var(--c-fondo) 86%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--c-borde);
+}
+
+.cabecera__interior {
+  height: var(--alto-barra);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.marca__icono {
+  border-radius: var(--r-sm);
+}
+
+.marca__nombre {
+  font-size: var(--t-md);
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+.cabecera__atras {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: var(--tactil);
+  /* El margen negativo hace que el área táctil llegue al borde de la pantalla,
+     que es donde el pulgar aterriza sin apuntar. */
+  margin-left: calc(var(--e-3) * -1);
+  padding-inline: var(--e-3);
+  border-radius: var(--r-md);
+  font-weight: 620;
+  color: var(--c-texto-suave);
+}
+
+.cabecera__atras:hover {
+  background: var(--c-superficie-2);
+  color: var(--c-texto);
+}
+
+/* --------------------------------------------------------------------------
+ * Contenido
+ * ------------------------------------------------------------------------ */
+
+.contenido {
+  flex: 1;
+  padding-block: var(--e-5);
+  /* Hueco para que la barra inferior no tape el final de la página. */
+  padding-bottom: calc(var(--e-8) + var(--e-5) + var(--seguro-abajo));
+}
+
+/* --------------------------------------------------------------------------
+ * Navegación
+ * ------------------------------------------------------------------------ */
+
+.navegacion {
+  display: flex;
+}
+
+.navegacion__enlace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-2);
+  color: var(--c-texto-tenue);
+  transition: color var(--transicion), background var(--transicion);
+}
+
+.navegacion__enlace.es-activo {
+  color: var(--c-acento);
+}
+
+.icono {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+}
+
+/* --- Barra inferior (móvil) --- */
+
+.navegacion--inferior {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  justify-content: space-around;
+  padding-bottom: var(--seguro-abajo);
+  background: color-mix(in srgb, var(--c-superficie) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--c-borde);
+}
+
+.navegacion--inferior .navegacion__enlace {
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 60px;
+  padding-block: var(--e-2);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+.navegacion--inferior .icono {
+  width: 24px;
+  height: 24px;
+}
+
+/* Marca visual del destino activo, que el color por sí solo no basta. */
+.navegacion--inferior .navegacion__enlace.es-activo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 32px;
+  height: 3px;
+  border-radius: 0 0 var(--r-full) var(--r-full);
+  background: var(--c-acento);
+}
+
+.navegacion--inferior .navegacion__enlace {
+  position: relative;
+}
+
+.navegacion--cabecera {
+  display: none;
+}
+
+/* --- En escritorio, la navegación sube a la cabecera --- */
+
+@media (min-width: 700px) {
+  .navegacion--inferior {
+    display: none;
+  }
+
+  .navegacion--cabecera {
+    display: flex;
+    gap: var(--e-1);
+  }
+
+  .navegacion--cabecera .navegacion__enlace {
+    min-height: 40px;
+    padding-inline: var(--e-3);
+    border-radius: var(--r-full);
+    font-size: var(--t-base);
+    font-weight: 600;
+  }
+
+  .navegacion--cabecera .navegacion__enlace:hover {
+    background: var(--c-superficie-2);
+    color: var(--c-texto);
+  }
+
+  .navegacion--cabecera .navegacion__enlace.es-activo {
+    background: var(--c-acento-suave);
+    color: var(--c-acento);
+  }
+
+  .contenido {
+    padding-bottom: var(--e-7);
+  }
+}

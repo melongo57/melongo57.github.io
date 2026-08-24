@@ -1,0 +1,117 @@
+import { useState } from 'react';
+import { repo } from '@/datos/repositorioDexie.ts';
+import { cargarDatosEjemplo } from '@/datos/semilla.ts';
+import type { Tema } from '@/dominio/tipos.ts';
+import { Boton } from '../componentes/Boton.tsx';
+import { CampoSelector } from '../componentes/Campo.tsx';
+import { HojaModal } from '../componentes/HojaModal.tsx';
+import { useVehiculos } from '../ganchos/consultas.ts';
+import { aplicarTema, temaGuardado } from '../tema.ts';
+import './Ajustes.css';
+
+const TEMAS: readonly { valor: Tema; nombre: string; icono: string }[] = [
+  { valor: 'sistema', nombre: 'Como el sistema', icono: '◐' },
+  { valor: 'claro', nombre: 'Claro', icono: '☀' },
+  { valor: 'oscuro', nombre: 'Oscuro', icono: '☾' },
+];
+
+export function Ajustes(): React.JSX.Element {
+  const [tema, setTema] = useState<Tema>(() => temaGuardado());
+  const vehiculos = useVehiculos();
+  const [confirmando, setConfirmando] = useState<'borrar' | 'ejemplo' | null>(null);
+  const [trabajando, setTrabajando] = useState(false);
+
+  function elegirTema(valor: Tema): void {
+    setTema(valor);
+    aplicarTema(valor);
+    void repo.ajustes.guardar({ tema: valor });
+  }
+
+  async function vaciar(): Promise<void> {
+    setTrabajando(true);
+    await repo.vaciar();
+    setConfirmando(null);
+    setTrabajando(false);
+  }
+
+  async function recargarEjemplo(): Promise<void> {
+    setTrabajando(true);
+    await repo.vaciar();
+    await cargarDatosEjemplo(repo);
+    setConfirmando(null);
+    setTrabajando(false);
+  }
+
+  return (
+    <div className="contenedor ajustes">
+      <h1>Ajustes</h1>
+
+      <section className="bloque">
+        <h2 className="bloque__titulo">Aspecto</h2>
+        <CampoSelector
+          etiqueta="Tema"
+          valor={tema}
+          alCambiar={elegirTema}
+          opciones={TEMAS}
+          ayuda="«Como el sistema» sigue el modo oscuro del móvil, que se activa solo por la noche."
+        />
+      </section>
+
+      <section className="bloque">
+        <h2 className="bloque__titulo">Tus datos</h2>
+        <p className="ajustes__texto">
+          Todo se guarda en este navegador y no sale de aquí. Ahora mismo hay{' '}
+          <strong className="numero">{vehiculos?.length ?? 0}</strong>{' '}
+          {vehiculos?.length === 1 ? 'vehículo' : 'vehículos'}.
+        </p>
+        <p className="ajustes__aviso">
+          <strong>Haz copias de seguridad.</strong> Si borras los datos de navegación, se van.
+          La exportación e importación en JSON llegan en la fase 7.
+        </p>
+        <div className="ajustes__acciones">
+          <Boton alPulsar={() => setConfirmando('ejemplo')}>Recargar datos de ejemplo</Boton>
+          <Boton variante="peligro" alPulsar={() => setConfirmando('borrar')}>
+            Borrar todo
+          </Boton>
+        </div>
+      </section>
+
+      <section className="bloque">
+        <h2 className="bloque__titulo">Sobre esta versión</h2>
+        <p className="ajustes__texto">
+          Fase 2 de 7. Funcionan el alta de vehículos y el registro de kilómetros. Los
+          mantenimientos y sus vencimientos llegan en la fase 3; repostajes y gastos, en la
+          cuarta.
+        </p>
+      </section>
+
+      <HojaModal
+        abierta={confirmando !== null}
+        titulo={confirmando === 'borrar' ? '¿Borrar todos los datos?' : '¿Recargar el ejemplo?'}
+        alCerrar={() => setConfirmando(null)}
+      >
+        <div className="borrado">
+          <p>
+            {confirmando === 'borrar'
+              ? 'Se borrarán todos los vehículos y su histórico completo. No se puede deshacer.'
+              : 'Se borrará lo que haya ahora y se cargarán de nuevo los cuatro vehículos de ejemplo. No se puede deshacer.'}
+          </p>
+          <div className="fila-botones">
+            <Boton variante="sutil" alPulsar={() => setConfirmando(null)}>
+              Cancelar
+            </Boton>
+            <Boton
+              variante="peligro"
+              cargando={trabajando}
+              alPulsar={() =>
+                void (confirmando === 'borrar' ? vaciar() : recargarEjemplo())
+              }
+            >
+              {confirmando === 'borrar' ? 'Borrar todo' : 'Recargar'}
+            </Boton>
+          </div>
+        </div>
+      </HojaModal>
+    </div>
+  );
+}
