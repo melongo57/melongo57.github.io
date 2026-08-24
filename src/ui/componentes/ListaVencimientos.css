@@ -1,0 +1,162 @@
+.lista-vencimientos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.vencimiento {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-borde);
+  background: var(--c-superficie-2);
+}
+
+.vencimiento.es-compacta {
+  padding: var(--e-2) var(--e-3);
+}
+
+/*
+ * La franja lateral hace visible el estado incluso de reojo, sin leer. Es la
+ * segunda señal, después de la etiqueta con palabra: al sol, un rojo y un
+ * verde saturados se confunden más de lo que parece.
+ */
+.vencimiento {
+  border-left-width: 4px;
+}
+
+.vencimiento.es-vencido {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  border-left-color: var(--c-alerta);
+}
+
+.vencimiento.es-proximo {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  border-left-color: var(--c-aviso);
+}
+
+.vencimiento.es-ok {
+  border-left-color: var(--c-ok);
+}
+
+.vencimiento__icono {
+  flex-shrink: 0;
+  font-size: var(--t-md);
+  line-height: 1;
+}
+
+.vencimiento__cuerpo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.vencimiento__titulo {
+  font-weight: 620;
+  font-size: var(--t-base);
+  line-height: 1.25;
+}
+
+.vencimiento__resto {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.es-vencido .vencimiento__resto {
+  color: var(--c-alerta);
+}
+
+.es-proximo .vencimiento__resto {
+  color: var(--c-aviso);
+}
+
+.es-ok .vencimiento__resto {
+  color: var(--c-texto-suave);
+}
+
+.vencimiento__detalle {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+/* --------------------------------------------------------------------------
+ * Etiqueta de estado
+ * ------------------------------------------------------------------------ */
+
+.etiqueta-semaforo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  font-size: var(--t-xs);
+  font-weight: 680;
+  border: 1px solid;
+}
+
+.etiqueta-semaforo__simbolo {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.etiqueta-semaforo.es-vencido {
+  background: var(--c-alerta);
+  border-color: var(--c-alerta);
+  color: var(--c-superficie);
+}
+
+:root[data-tema='oscuro'] .etiqueta-semaforo.es-vencido {
+  color: var(--c-fondo);
+}
+
+.etiqueta-semaforo.es-vencido .etiqueta-semaforo__simbolo {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.etiqueta-semaforo.es-proximo {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso);
+  color: var(--c-aviso);
+}
+
+.etiqueta-semaforo.es-proximo .etiqueta-semaforo__simbolo {
+  background: color-mix(in srgb, var(--c-aviso) 22%, transparent);
+}
+
+.etiqueta-semaforo.es-ok {
+  background: var(--c-ok-fondo);
+  border-color: var(--c-ok-borde);
+  color: var(--c-ok);
+}
+
+.etiqueta-semaforo.es-ok .etiqueta-semaforo__simbolo {
+  background: color-mix(in srgb, var(--c-ok) 20%, transparent);
+}
+
+/*
+ * En pantallas estrechas se aprieta la etiqueta, pero la palabra NO se
+ * esconde: 375 px es justo el ancho del móvil, que es donde se usa la app, y
+ * dejar solo el color ahí anularía el motivo de tener etiqueta.
+ */
+@media (max-width: 400px) {
+  .etiqueta-semaforo {
+    padding: 3px 7px;
+    gap: 4px;
+  }
+
+  .vencimiento__icono {
+    display: none;
+  }
+}
