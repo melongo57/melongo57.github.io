@@ -4,9 +4,10 @@ Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimient
 aplicación web instalable que funciona sin conexión y guarda los datos en tu propio
 dispositivo.
 
-> **Estado: fase 4 de 7 completada.** Funcionan el panel con semáforo de vencimientos y
-> consumo real, el alta de vehículos, kilómetros, mantenimientos con recurrencias, repostajes
-> y gastos, con el coste por kilómetro. Las gráficas llegan en la fase 6.
+> **Estado: fase 5 de 7 completada.** Funcionan el panel con semáforo y consumo real, los
+> vehículos, kilómetros, mantenimientos con recurrencias, repostajes, gastos, documentos con
+> adjuntos, la agenda de vencimientos y la exportación al calendario. Faltan las gráficas y
+> la exportación completa de datos.
 
 ## Arranque
 
@@ -72,12 +73,25 @@ sería escribir una segunda implementación de esa interfaz, no rediseñar el es
 
 No existe hoy una API de navegador fiable para «avísame dentro de 30 días» con la
 aplicación cerrada: la *Notification Triggers API* está descartada en Chrome y nunca existió
-en Safari, y las push reales necesitan un servidor que las empuje. Por eso la fase 5
-implementará **dos vías**:
+en Safari, y las push reales necesitan un servidor que las empuje. Por eso hay **dos vías**,
+y la app dice con todas las letras lo que hace cada una:
 
-1. Notificaciones locales al abrir la app o poco después de cerrarla (*best-effort*).
-2. **Exportación de los vencimientos a `.ics`**, para que Google Calendar o Apple Calendario
-   se encarguen del recordatorio. Esta es la que de verdad va a avisarte.
+1. **Notificaciones al abrir la app.** Útiles —te enteras de la ITV caducada nada más
+   entrar— pero nada más. Como mucho tres a la vez y una vez al día por aviso: cinco
+   notificaciones de golpe se descartan enteras sin leerlas, y repetir el mismo aviso cada
+   vez que abres la app es la forma más rápida de que acaben bloqueadas.
+2. **Exportación a `.ics`**, que es la que de verdad avisa. El archivo lleva un `VALARM` por
+   cita con su antelación, y un UID estable para que reimportarlo actualice en lugar de
+   duplicar.
+
+El generador de `.ics` cumple el RFC 5545 en los detalles que rompen los clientes: CRLF
+obligatorio (con LF a secas, Outlook no abre el archivo), plegado de líneas **a 75 octetos y
+no a 75 caracteres** —cada vocal acentuada ocupa dos bytes en UTF-8— sin partir nunca un
+carácter multibyte, y `DTEND` exclusivo en los eventos de día completo.
+
+Al calendario solo van los vencimientos **con fecha**. Un mantenimiento que vence a los
+140.000 km no se puede poner en una agenda: nadie sabe qué día llegarás. Y tampoco va lo que
+no se ha registrado nunca, que llenaría el calendario de citas inventadas.
 
 ### Sobre el tipado
 
@@ -106,6 +120,7 @@ src/
 │   ├── vencimientos.ts Motor de vencimientos y semáforo
 │   ├── consumo.ts     Consumo real de lleno a lleno
 │   ├── costes.ts      Coste por kilómetro y de propiedad
+│   ├── calendario.ts  Agenda futura y exportación a .ics
 │   └── validacion.ts  Reglas de entrada: errores frente a avisos
 ├── datos/       Persistencia.
 │   ├── db.ts               Esquema, índices y migraciones de IndexedDB
@@ -310,7 +325,7 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-246 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+280 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
 vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
@@ -335,7 +350,7 @@ npm test
 - [x] **Fase 2** — CRUD de vehículos, registro de kilómetros y panel principal
 - [x] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
 - [x] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
-- [ ] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
+- [x] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
 - [ ] **Fase 6** — Analíticas y gráficas
 - [ ] **Fase 7** — PWA completa: offline, instalable, exportación e importación
 
