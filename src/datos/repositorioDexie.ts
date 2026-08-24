@@ -105,12 +105,19 @@ function crearColeccionDeVehiculo<T extends ConVehiculo>(
 
 function crearColeccionAjustes(tabla: () => Table<Ajustes, Id>): ColeccionAjustes {
   return {
+    /*
+     * LEER NO ESCRIBE. Antes, si no había ajustes guardados, esta función los
+     * creaba en la base «de paso». Parecía cómodo y era una bomba de relojería:
+     * `useLiveQuery` ejecuta sus consultas dentro de una transacción de SOLO
+     * LECTURA, así que en cuanto los ajustes faltaban —justo después de un
+     * «borrar todo», o de una importación— la app entera reventaba con
+     * `ReadOnlyError`.
+     *
+     * Los valores por defecto se devuelven sin persistirlos. Se guardan la
+     * primera vez que el usuario cambia algo, que es cuando toca escribir.
+     */
     async obtener() {
-      const guardados = await tabla().get(ID_AJUSTES);
-      if (guardados) return guardados;
-      const iniciales = ajustesPorDefecto();
-      await tabla().put(iniciales);
-      return iniciales;
+      return (await tabla().get(ID_AJUSTES)) ?? ajustesPorDefecto();
     },
     async guardar(cambios: Cambios<Ajustes>) {
       const actuales = await this.obtener();
@@ -240,6 +247,17 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
       await base.transaction('rw', base.tables, async () => {
         await Promise.all(base.tables.map((t) => t.clear()));
       });
+    },
+
+    async leerTabla(nombre) {
+      return base.table(nombre).toArray();
+    },
+
+    async escribirTabla(nombre, filas) {
+      // `bulkPut` y no `bulkAdd`: la tabla se acaba de vaciar, pero si una
+      // copia trajera ids repetidos es mejor que el último gane a que la
+      // importación entera reviente a mitad.
+      await base.table(nombre).bulkPut(filas);
     },
   };
 }

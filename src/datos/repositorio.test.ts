@@ -281,3 +281,34 @@ describe('vaciar', () => {
     expect(await repo.lecturas.contar()).toBe(0);
   });
 });
+
+describe('ajustes: leer nunca escribe', () => {
+  it('devuelve los valores por defecto sin guardarlos en la base', async () => {
+    /*
+     * `useLiveQuery` ejecuta sus consultas dentro de una transacción de solo
+     * lectura. Si leer los ajustes los creara «de paso», la app entera
+     * reventaría con ReadOnlyError en cuanto faltaran: justo después de un
+     * «borrar todo» o de una importación.
+     */
+    const ajustes = await repo.ajustes.obtener();
+    expect(ajustes.tema).toBe('sistema');
+
+    // La lectura no ha dejado nada escrito.
+    expect(await base.ajustes.count()).toBe(0);
+  });
+
+  it('los persiste en cuanto se cambia algo', async () => {
+    await repo.ajustes.guardar({ tema: 'oscuro' });
+    expect(await base.ajustes.count()).toBe(1);
+    expect((await repo.ajustes.obtener()).tema).toBe('oscuro');
+  });
+
+  it('sigue funcionando después de vaciar la base', async () => {
+    await repo.ajustes.guardar({ tema: 'oscuro' });
+    await repo.vaciar();
+
+    // Sin el arreglo, esto reventaba en cuanto lo llamaba una liveQuery.
+    const ajustes = await repo.ajustes.obtener();
+    expect(ajustes.tema).toBe('sistema');
+  });
+});

@@ -1,3 +1,4 @@
+import type { NombreTabla } from './db.ts';
 import type {
   Adjunto,
   Ajustes,
@@ -68,4 +69,14 @@ export interface Repositorio {
 
   /** Vacía todas las tablas. Lo usa la importación de un JSON completo. */
   vaciar(): Promise<void>;
+
+  /**
+   * Acceso por nombre de tabla, para la copia de seguridad completa.
+   *
+   * Es deliberadamente genérico: una exportación tiene que llevarse TODO, y
+   * enumerar las colecciones una por una garantizaría que la próxima tabla
+   * que se añada se quede fuera sin que nadie se dé cuenta.
+   */
+  leerTabla(nombre: NombreTabla): Promise<unknown[]>;
+  escribirTabla(nombre: NombreTabla, filas: unknown[]): Promise<void>;
 }
