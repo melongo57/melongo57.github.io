@@ -1,0 +1,127 @@
+.repostajes,
+.gastos {
+  max-width: 760px;
+}
+
+.repostajes__cabecera,
+.gastos__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.repostajes__cabecera h1,
+.gastos__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.repostajes__sub,
+.gastos__sub {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.repostajes__total,
+.gastos__total {
+  margin-bottom: var(--e-3);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.repostajes__lista,
+.gastos__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.rep-fila {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-3);
+  width: 100%;
+  padding: var(--e-3);
+  text-align: left;
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-md);
+  transition: border-color var(--transicion), background var(--transicion);
+}
+
+.rep-fila:hover {
+  border-color: var(--c-acento-borde);
+  background: var(--c-superficie-2);
+}
+
+/* Un repostaje parcial no cierra tramo: se distingue sin gritar. */
+.rep-fila.es-parcial {
+  border-style: dashed;
+}
+
+.rep-fila__cuerpo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.rep-fila__linea {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  flex-wrap: wrap;
+}
+
+.rep-fila__cantidad {
+  font-weight: 650;
+}
+
+.rep-fila__marca {
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie-3);
+  border: 1px solid var(--c-borde-fuerte);
+  color: var(--c-texto-tenue);
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rep-fila__marca.es-ruptura {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  color: var(--c-aviso);
+}
+
+.rep-fila__meta {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.rep-fila__estacion {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+.rep-fila__derecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.rep-fila__importe {
+  font-weight: 650;
+}
+
+/* El consumo del tramo que cierra este repostaje. */
+.rep-fila__consumo {
+  font-size: var(--t-sm);
+  font-weight: 620;
+  color: var(--c-acento);
+}
