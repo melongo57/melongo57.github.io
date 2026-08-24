@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { AvisoActualizacion } from '../componentes/AvisoActualizacion.tsx';
 import { useAvisosAlArrancar } from '../componentes/AvisoNotificaciones.tsx';
 import { IconoAgenda, IconoAjustes, IconoPanel, IconoVehiculos } from './iconos.tsx';
 import './Disposicion.css';
@@ -79,6 +80,7 @@ export function Disposicion(): React.JSX.Element {
       </main>
 
       <Navegacion lugar="inferior" />
+      <AvisoActualizacion />
     </div>
   );
 }

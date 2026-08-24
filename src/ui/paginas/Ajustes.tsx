@@ -4,6 +4,8 @@ import { cargarDatosEjemplo } from '@/datos/semilla.ts';
 import type { Tema } from '@/dominio/tipos.ts';
 import { AvisoNotificaciones } from '../componentes/AvisoNotificaciones.tsx';
 import { Boton } from '../componentes/Boton.tsx';
+import { CopiaSeguridad } from '../componentes/CopiaSeguridad.tsx';
+import { EstadoInstalacion } from '../componentes/EstadoInstalacion.tsx';
 import { CampoSelector } from '../componentes/Campo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
 import { useVehiculos } from '../ganchos/consultas.ts';
@@ -72,9 +74,12 @@ export function Ajustes(): React.JSX.Element {
         </p>
         <p className="ajustes__aviso">
           <strong>Haz copias de seguridad.</strong> Si borras los datos de navegación, se van.
-          La exportación e importación en JSON llegan en la fase 7.
+          Descarga el JSON de vez en cuando y guárdalo donde guardes lo que te importa.
         </p>
-        <div className="ajustes__acciones">
+
+        <CopiaSeguridad />
+
+        <div className="ajustes__acciones ajustes__acciones--peligro">
           <Boton alPulsar={() => setConfirmando('ejemplo')}>Recargar datos de ejemplo</Boton>
           <Boton variante="peligro" alPulsar={() => setConfirmando('borrar')}>
             Borrar todo
@@ -83,11 +88,15 @@ export function Ajustes(): React.JSX.Element {
       </section>
 
       <section className="bloque">
+        <h2 className="bloque__titulo">Instalación</h2>
+        <EstadoInstalacion />
+      </section>
+
+      <section className="bloque">
         <h2 className="bloque__titulo">Sobre esta versión</h2>
         <p className="ajustes__texto">
-          Fase 5 de 7. Funcionan vehículos, kilómetros, mantenimientos con recurrencias,
-          repostajes, gastos, documentos y adjuntos. Faltan las gráficas y la exportación
-          completa de tus datos.
+          Versión completa. Vehículos, kilómetros, mantenimientos con recurrencias,
+          repostajes, gastos, documentos, adjuntos, agenda, análisis y copia de seguridad.
         </p>
       </section>
 

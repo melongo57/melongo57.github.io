@@ -1,0 +1,64 @@
+.copia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.copia__texto {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.copia__texto--tenue {
+  color: var(--c-texto-tenue);
+  padding-top: var(--e-2);
+  border-top: 1px solid var(--c-borde);
+}
+
+.copia__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.copia__ok,
+.copia__fallo {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  border: 1px solid;
+  font-size: var(--t-sm);
+}
+
+.copia__ok {
+  background: var(--c-ok-fondo);
+  border-color: var(--c-ok-borde);
+  color: var(--c-ok);
+}
+
+.copia__fallo {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}
+
+.copia__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--e-2);
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+/* El aviso de reemplazo se lee antes de pulsar, no después. */
+.copia__peligro {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-alerta-fondo);
+  border: 1px solid var(--c-alerta-borde);
+  color: var(--c-alerta);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}

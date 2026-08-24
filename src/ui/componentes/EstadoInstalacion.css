@@ -1,0 +1,56 @@
+.instalacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.instalacion__estado {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-sm);
+  font-weight: 620;
+}
+
+.instalacion__punto {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+
+.instalacion__estado.es-linea {
+  color: var(--c-ok);
+}
+
+.instalacion__estado.es-linea .instalacion__punto {
+  background: var(--c-ok);
+}
+
+/* Sin conexión no es un error en esta app: es el modo normal. */
+.instalacion__estado.es-sin-linea {
+  color: var(--c-texto-suave);
+}
+
+.instalacion__estado.es-sin-linea .instalacion__punto {
+  background: var(--c-borde-fuerte);
+}
+
+.instalacion__texto {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.instalacion__texto--tenue {
+  color: var(--c-texto-tenue);
+}
+
+.instalacion__ok {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-ok-fondo);
+  border: 1px solid var(--c-ok-borde);
+  color: var(--c-ok);
+  font-size: var(--t-sm);
+  font-weight: 620;
+}

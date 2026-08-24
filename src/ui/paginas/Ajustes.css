@@ -29,3 +29,9 @@
   flex-wrap: wrap;
   gap: var(--e-3);
 }
+
+/* Las acciones destructivas van separadas del resto por una línea. */
+.ajustes__acciones--peligro {
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--c-borde);
+}

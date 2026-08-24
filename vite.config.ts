@@ -6,15 +6,28 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     react(),
-    // El service worker completo llega en la fase 7. De momento se registra en
-    // modo `injectManifest`-less (generateSW) para que la app sea instalable.
+    /*
+     * `registerType: 'prompt'` a propósito: una versión nueva no se aplica
+     * sola. Recargar por sorpresa a alguien que está a medio anotar un
+     * repostaje le borraría el formulario; se avisa y decide él.
+     */
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: false, // usamos public/manifest.webmanifest, escrito a mano
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Las rutas de la app son del lado del cliente: cualquier navegación
+        // se sirve con el index y React Router decide qué pintar. Sin esto,
+        // abrir /agenda sin conexión daría un 404.
         navigateFallback: '/index.html',
+        /*
+         * 4 MB de tope por recurso. El valor por defecto (2 MB) deja fuera el
+         * bundle con Recharts, y un archivo excluido del precaché es un
+         * archivo que no está sin conexión: la app arrancaría en blanco.
+         */
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },
     }),
