@@ -9,13 +9,29 @@ import {
   type ResumenVencimientos,
   type Vencimiento,
 } from '@/dominio/vencimientos.ts';
+import { resumirConsumo, type ResumenConsumo } from '@/dominio/consumo.ts';
+import {
+  calcularCostePorKm,
+  calcularCosteTotalPropiedad,
+  gastoPorCategoria,
+  gastoPorMes,
+  ultimosMeses,
+  type CostePorKm,
+  type CosteTotalPropiedad,
+  type GastoMensual,
+  type GastoPorCategoria,
+} from '@/dominio/costes.ts';
+import { unidadesDe } from '@/dominio/catalogos.ts';
+import { estacionesFrecuentes } from '@/datos/acciones.ts';
 import type {
   Centimos,
   Documento,
+  Gasto,
   Id,
   Mantenimiento,
   PuntoOdometro,
   ReglaMantenimiento,
+  Repostaje,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 
@@ -94,6 +110,8 @@ export interface ResumenPanel {
   gastoDelMesCentimos: Centimos;
   registrosDelMes: number;
   vencimientos: ResumenVencimientos;
+  /** Una entrada por unidad: un híbrido enchufable tiene dos. */
+  consumos: ResumenConsumo[];
 }
 
 async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel> {
@@ -117,6 +135,7 @@ async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel>
     estimacion,
     kmAlAnio: kmAnuales(puntos),
     vencimientos: resumirVencimientos(vencimientos),
+    consumos: unidadesDe(vehiculo.combustible).map((u) => resumirConsumo(repostajes, u)),
     gastoDelMesCentimos:
       repostajesMes.reduce((t, r) => t + r.importeCentimos, 0) +
       mantenimientosMes.reduce((t, m) => t + m.costeCentimos, 0) +
@@ -223,5 +242,69 @@ export function useDocumentos(vehiculoId: Id | undefined): Documento[] | undefin
   return useLiveQuery(async () => {
     if (!vehiculoId) return [];
     return repo.documentos.listarPorVehiculo(vehiculoId);
+  }, [vehiculoId]);
+}
+
+// ---------------------------------------------------------------------------
+// Repostajes, gastos y cálculos
+// ---------------------------------------------------------------------------
+
+export function useRepostajes(vehiculoId: Id | undefined): Repostaje[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    const lista = await repo.repostajes.listarPorVehiculo(vehiculoId);
+    return lista.reverse();
+  }, [vehiculoId]);
+}
+
+export function useGastos(vehiculoId: Id | undefined): Gasto[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    const lista = await repo.gastos.listarPorVehiculo(vehiculoId);
+    return lista.reverse();
+  }, [vehiculoId]);
+}
+
+export function useEstacionesFrecuentes(vehiculoId: Id | undefined): string[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    return estacionesFrecuentes(vehiculoId);
+  }, [vehiculoId]);
+}
+
+export interface AnalisisVehiculo {
+  consumos: ResumenConsumo[];
+  /** Coste por kilómetro de todo el histórico registrado. */
+  costeHistorico: CostePorKm;
+  /** Y el de los últimos doce meses, que suele ser el que importa. */
+  costeReciente: CostePorKm;
+  propiedad: CosteTotalPropiedad;
+  porMes: GastoMensual[];
+  porCategoria: GastoPorCategoria[];
+}
+
+export function useAnalisis(vehiculoId: Id | undefined): AnalisisVehiculo | undefined | null {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return null;
+    const vehiculo = await db.vehiculos.get(vehiculoId);
+    if (!vehiculo) return null;
+
+    const [puntos, repostajes, mantenimientos, gastos] = await Promise.all([
+      repo.puntosOdometro(vehiculoId),
+      repo.repostajes.listarPorVehiculo(vehiculoId),
+      repo.mantenimientos.listarPorVehiculo(vehiculoId),
+      repo.gastos.listarPorVehiculo(vehiculoId),
+    ]);
+
+    const entrada = { vehiculo, repostajes, mantenimientos, gastos, puntos };
+
+    return {
+      consumos: unidadesDe(vehiculo.combustible).map((u) => resumirConsumo(repostajes, u)),
+      costeHistorico: calcularCostePorKm(entrada),
+      costeReciente: calcularCostePorKm({ ...entrada, periodo: ultimosMeses(12) }),
+      propiedad: calcularCosteTotalPropiedad(entrada),
+      porMes: gastoPorMes(entrada),
+      porCategoria: gastoPorCategoria(entrada),
+    };
   }, [vehiculoId]);
 }

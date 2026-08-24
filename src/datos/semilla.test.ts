@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { diasEntre, hoyISO, mesesEntre } from '@/dominio/fechas.ts';
 import { kmAnuales } from '@/dominio/odometro.ts';
+import { resumirConsumo } from '@/dominio/consumo.ts';
 import { nuevoId } from '@/dominio/ids.ts';
 import { BaseDatosGaraje } from './db.ts';
 import type { Repositorio } from './repositorio.ts';
@@ -217,6 +218,57 @@ describe('coherencia de los importes', () => {
       const precio = r.importeCentimos / 100 / r.cantidad;
       expect(precio).toBeGreaterThan(1.3);
       expect(precio).toBeLessThan(1.8);
+    }
+  });
+});
+
+describe('coherencia física de los repostajes', () => {
+  it('el consumo calculado se parece al que se sembró', async () => {
+    /*
+     * Esto vigila las dos mitades a la vez: que la semilla genere datos
+     * posibles y que el motor de consumo los lea bien. Si un repostaje parcial
+     * no arrastrase su deuda al siguiente, la serie describiría un coche que
+     * recorre kilómetros con combustible que nunca entró en el depósito, y el
+     * consumo saldría muy por debajo del real.
+     */
+    const esperado: Record<string, { unidad: 'l' | 'kWh'; base: number }> = {
+      'El Golf': { unidad: 'l', base: 5.6 },
+      'La Zoe': { unidad: 'kWh', base: 17.4 },
+      'La Autocaravana': { unidad: 'l', base: 10.6 },
+      'El Ibiza': { unidad: 'l', base: 7.2 },
+    };
+
+    for (const [alias, { unidad, base }] of Object.entries(esperado)) {
+      const v = await porAlias(alias);
+      const repostajes = await repo.repostajes.listarPorVehiculo(v.id);
+      const resumen = resumirConsumo(repostajes, unidad);
+
+      expect(resumen.consumoMedio).not.toBeNull();
+      // Un 12 % de margen: la semilla mete ruido y el Golf además deriva.
+      expect(resumen.consumoMedio!).toBeGreaterThan(base * 0.88);
+      expect(resumen.consumoMedio!).toBeLessThan(base * 1.12);
+    }
+  });
+
+  it('la deriva del Golf se ve en los tramos recientes', async () => {
+    // La semilla le mete un +11 % al final: es lo que la fase 6 tendrá que
+    // detectar como anomalía, y si no se nota aquí, no habrá nada que detectar.
+    const golf = await porAlias('El Golf');
+    const repostajes = await repo.repostajes.listarPorVehiculo(golf.id);
+    const resumen = resumirConsumo(repostajes, 'l');
+
+    expect(resumen.consumoReciente!).toBeGreaterThan(resumen.consumoMedio!);
+  });
+
+  it('los tramos con un repostaje parcial no dan cifras imposibles', async () => {
+    const golf = await porAlias('El Golf');
+    const repostajes = await repo.repostajes.listarPorVehiculo(golf.id);
+    const { tramos } = resumirConsumo(repostajes, 'l');
+
+    for (const tramo of tramos) {
+      // Ningún diésel de 150 CV baja de 3 l/100 km ni pasa de 12.
+      expect(tramo.consumo).toBeGreaterThan(3);
+      expect(tramo.consumo).toBeLessThan(12);
     }
   });
 });

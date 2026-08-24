@@ -96,8 +96,20 @@ interface PlanRepostajes {
  */
 function generarRepostajes(plan: PlanRepostajes): Nuevo<Repostaje>[] {
   const azar = generador(plan.semilla);
-  const serie: Nuevo<Repostaje>[] = [];
 
+  /** Datos crudos de cada repostaje antes de repartir el combustible. */
+  interface Borrador {
+    fecha: FechaISO;
+    km: number;
+    /** Combustible que de verdad se ha quemado en su tramo. */
+    teorica: number;
+    parcial: boolean;
+    ruptura: boolean;
+    precio: number;
+    estacion: string;
+  }
+
+  const borradores: Borrador[] = [];
   let fecha = plan.fechaFin;
   let km = plan.kmFin;
 
@@ -111,31 +123,59 @@ function generarRepostajes(plan: PlanRepostajes): Nuevo<Repostaje>[] {
     // Kilómetros recorridos desde el repostaje anterior.
     const avance = Math.round(plan.kmPorTramo * entre(azar, 0.82, 1.18));
 
-    const parcial = i > 0 && i % 9 === 4;
-    const ruptura = i === Math.floor(plan.cantidad * 0.5);
-
-    const teorica = (avance * consumo) / 100;
-    const cantidad = redondear(parcial ? teorica * entre(azar, 0.45, 0.65) : teorica, 2);
-    const precio = redondear(entre(azar, plan.precioMin, plan.precioMax), 3);
-
-    serie.push({
-      vehiculoId: plan.vehiculoId,
+    borradores.push({
       fecha,
-      cantidad,
-      unidad: plan.unidad,
-      importeCentimos: aCentimos(cantidad * precio),
       km,
-      depositoLleno: !parcial,
-      rupturaSerie: ruptura,
+      teorica: (avance * consumo) / 100,
+      parcial: i > 0 && i % 9 === 4,
+      ruptura: i === Math.floor(plan.cantidad * 0.5),
+      precio: redondear(entre(azar, plan.precioMin, plan.precioMax), 3),
       estacion: plan.estaciones[Math.floor(azar() * plan.estaciones.length)] ?? '',
-      adjuntoIds: [],
     });
 
     km -= avance;
     fecha = sumarDias(fecha, -Math.round(entre(azar, plan.diasEntreMin, plan.diasEntreMax)));
   }
 
-  return serie.reverse();
+  borradores.reverse();
+
+  /*
+   * Reparto del combustible, ya en orden cronológico.
+   *
+   * Un repostaje parcial mete menos de lo consumido, así que el depósito
+   * queda por debajo del lleno: esa diferencia la tiene que meter el
+   * siguiente. Sin arrastrar esa deuda, la serie es físicamente imposible
+   * —el coche habría recorrido kilómetros con combustible que nunca entró en
+   * el depósito— y el cálculo de consumo, que es correcto, devuelve cifras
+   * absurdamente bajas en los tramos que contienen un parcial.
+   */
+  let deuda = 0;
+
+  return borradores.map((b) => {
+    let cantidad: number;
+    if (b.parcial) {
+      const puesto = b.teorica * entre(azar, 0.45, 0.65);
+      deuda += b.teorica - puesto;
+      cantidad = puesto;
+    } else {
+      cantidad = b.teorica + deuda;
+      deuda = 0;
+    }
+    cantidad = redondear(cantidad, 2);
+
+    return {
+      vehiculoId: plan.vehiculoId,
+      fecha: b.fecha,
+      cantidad,
+      unidad: plan.unidad,
+      importeCentimos: aCentimos(cantidad * b.precio),
+      km: b.km,
+      depositoLleno: !b.parcial,
+      rupturaSerie: b.ruptura,
+      estacion: b.estacion,
+      adjuntoIds: [],
+    };
+  });
 }
 
 /**

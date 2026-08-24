@@ -2,11 +2,13 @@ import { plantillaReglas } from '@/dominio/catalogos.ts';
 import type {
   Adjunto,
   FechaISO,
+  Gasto,
   Id,
   LecturaOdometro,
   Mantenimiento,
   Nuevo,
   ReglaMantenimiento,
+  Repostaje,
   TipoMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
@@ -222,4 +224,57 @@ export async function completarReglas(vehiculo: Vehiculo): Promise<void> {
       activa: true,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Repostajes y gastos
+// ---------------------------------------------------------------------------
+
+export interface DatosRepostaje extends Nuevo<Repostaje> {
+  id?: Id;
+}
+
+export async function guardarRepostaje(datos: DatosRepostaje): Promise<Repostaje> {
+  if (datos.id) {
+    const { id, ...cambios } = datos;
+    return repo.repostajes.actualizar(id, cambios);
+  }
+  return repo.repostajes.crear(datos);
+}
+
+export function borrarRepostaje(id: Id): Promise<void> {
+  return repo.repostajes.borrar(id);
+}
+
+export interface DatosGasto extends Nuevo<Gasto> {
+  id?: Id;
+}
+
+export async function guardarGasto(datos: DatosGasto): Promise<Gasto> {
+  if (datos.id) {
+    const { id, ...cambios } = datos;
+    return repo.gastos.actualizar(id, cambios);
+  }
+  return repo.gastos.crear(datos);
+}
+
+export function borrarGasto(id: Id): Promise<void> {
+  return repo.gastos.borrar(id);
+}
+
+/**
+ * Estaciones que el usuario ya ha usado, de la más frecuente a la menos.
+ * Alimenta los atajos del formulario de repostaje.
+ */
+export async function estacionesFrecuentes(vehiculoId: Id, cuantas = 4): Promise<string[]> {
+  const repostajes = await repo.repostajes.listarPorVehiculo(vehiculoId);
+  const cuenta = new Map<string, number>();
+  for (const r of repostajes) {
+    const nombre = r.estacion?.trim();
+    if (nombre) cuenta.set(nombre, (cuenta.get(nombre) ?? 0) + 1);
+  }
+  return [...cuenta.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, cuantas)
+    .map(([nombre]) => nombre);
 }
