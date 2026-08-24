@@ -1,0 +1,146 @@
+/*
+ * Sistema de diseño de Mi Garaje.
+ *
+ * Paleta pensada para leerse en un móvil, al sol, en una gasolinera:
+ *  - Neutros CÁLIDOS, no grises azulados. Dan carácter sin hacer ruido.
+ *  - Acento índigo. Deliberadamente fuera del rojo/ámbar/verde para que el
+ *    color de marca no compita nunca con el semáforo de vencimientos.
+ *  - Contrastes por encima de AA en ambos temas: en exterior no hay margen.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* --- Neutros cálidos --- */
+  --c-fondo: #f7f5f2;
+  --c-superficie: #ffffff;
+  --c-superficie-2: #f1eeea;
+  --c-superficie-3: #e7e3dd;
+  --c-borde: #ded9d2;
+  --c-borde-fuerte: #c5bfb6;
+
+  --c-texto: #1a1815;
+  --c-texto-suave: #5c564e;
+  --c-texto-tenue: #78716a;
+
+  /* --- Acento --- */
+  --c-acento: #4f3fd6;
+  --c-acento-fuerte: #3f31b0;
+  --c-acento-suave: #eceaff;
+  --c-acento-borde: #c9c2ff;
+  --c-sobre-acento: #ffffff;
+
+  /* --- Semáforo de vencimientos --- */
+  --c-ok: #157347;
+  --c-ok-fondo: #e3f4ea;
+  --c-ok-borde: #a9dcbf;
+
+  --c-aviso: #a15c07;
+  --c-aviso-fondo: #fdf1dc;
+  --c-aviso-borde: #f0cf94;
+
+  --c-alerta: #b3261e;
+  --c-alerta-fondo: #fdeceb;
+  --c-alerta-borde: #f3b6b2;
+
+  /* --- Series de gráficas (fase 6). Distinguibles con deuteranopia. --- */
+  --c-serie-1: #4f3fd6;
+  --c-serie-2: #0e7c86;
+  --c-serie-3: #c2410c;
+  --c-serie-4: #7c3aed;
+  --c-serie-5: #a16207;
+  --c-serie-6: #be185d;
+
+  /* --- Sombras: muy sutiles, la jerarquía la marca el borde --- */
+  --sombra-1: 0 1px 2px rgba(26, 24, 21, 0.06);
+  --sombra-2: 0 2px 8px rgba(26, 24, 21, 0.08);
+  --sombra-3: 0 8px 28px rgba(26, 24, 21, 0.12);
+
+  /* --- Tipografía --- */
+  --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --fuente-numeros: ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-base: 0.9375rem;
+  --t-md: 1.0625rem;
+  --t-lg: 1.3125rem;
+  --t-xl: 1.75rem;
+  --t-2xl: 2.375rem;
+  --t-3xl: 3rem;
+
+  /* --- Espaciado: escala de 4 px --- */
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 0.75rem;
+  --e-4: 1rem;
+  --e-5: 1.5rem;
+  --e-6: 2rem;
+  --e-7: 3rem;
+  --e-8: 4rem;
+
+  /* --- Radios: generosos, la app se toca con el pulgar --- */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-full: 999px;
+
+  /*
+   * Objetivo táctil mínimo. 48 px es la recomendación de Material y es lo que
+   * separa una app que se usa en marcha de una que se usa parado.
+   */
+  --tactil: 48px;
+
+  /* --- Disposición --- */
+  --ancho-max: 1120px;
+  --alto-barra: 64px;
+  --seguro-abajo: env(safe-area-inset-bottom, 0px);
+  --seguro-arriba: env(safe-area-inset-top, 0px);
+
+  --transicion: 160ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+
+  --c-fondo: #131211;
+  --c-superficie: #1c1a18;
+  --c-superficie-2: #252220;
+  --c-superficie-3: #302c29;
+  --c-borde: #35312d;
+  --c-borde-fuerte: #4d4741;
+
+  --c-texto: #f6f3ef;
+  --c-texto-suave: #b5aea5;
+  --c-texto-tenue: #9a9289;
+
+  --c-acento: #9d92ff;
+  --c-acento-fuerte: #b3aaff;
+  --c-acento-suave: #211d3d;
+  --c-acento-borde: #3a3272;
+  --c-sobre-acento: #16132e;
+
+  --c-ok: #56d68d;
+  --c-ok-fondo: #12281c;
+  --c-ok-borde: #1f4a33;
+
+  --c-aviso: #f6bc4f;
+  --c-aviso-fondo: #2b2011;
+  --c-aviso-borde: #5a4318;
+
+  --c-alerta: #ff8a80;
+  --c-alerta-fondo: #2e1614;
+  --c-alerta-borde: #5c2823;
+
+  --c-serie-1: #9d92ff;
+  --c-serie-2: #4ecdc4;
+  --c-serie-3: #ff9f5a;
+  --c-serie-4: #c4a6ff;
+  --c-serie-5: #e3c04a;
+  --c-serie-6: #ff8fb8;
+
+  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sombra-2: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --sombra-3: 0 8px 30px rgba(0, 0, 0, 0.55);
+}

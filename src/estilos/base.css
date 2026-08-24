@@ -1,0 +1,138 @@
+@import './tokens.css';
+
+/* --------------------------------------------------------------------------
+ * Reinicio
+ * ------------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Evita el rebote elástico horizontal en Android al deslizar entre pestañas. */
+  overscroll-behavior-x: none;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--fuente);
+  font-size: var(--t-base);
+  line-height: 1.55;
+  color: var(--c-texto);
+  background: var(--c-fondo);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+picture,
+svg,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Accesibilidad
+ * ------------------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 3px solid var(--c-acento);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Quita el resalte azul al tocar en Android. Ya tenemos estados :active. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Utilidades transversales
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Todas las cifras van con cifras de ancho fijo. Sin esto, un contador que
+ * pasa de 9 a 10 desplaza el texto de al lado y la interfaz "baila".
+ */
+.numero {
+  font-family: var(--fuente-numeros);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.contenedor {
+  width: 100%;
+  max-width: var(--ancho-max);
+  margin-inline: auto;
+  padding-inline: var(--e-4);
+}
