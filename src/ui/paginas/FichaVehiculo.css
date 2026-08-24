@@ -317,3 +317,82 @@
   color: var(--c-acento);
   font-size: var(--t-sm);
 }
+
+/* --------------------------------------------------------------------------
+ * Vencimientos
+ * ------------------------------------------------------------------------ */
+
+.ficha__vencimientos {
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.ficha__vencimientos-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  margin-bottom: var(--e-3);
+}
+
+.ficha__vencimientos-cabecera h2 {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+}
+
+.ficha__vencimientos-cabecera .boton {
+  min-height: 36px;
+  padding-inline: var(--e-3);
+  font-size: var(--t-sm);
+}
+
+/* Un total que además es un enlace se anuncia como tal. */
+.total--enlace {
+  transition: background var(--transicion);
+}
+
+.total--enlace:hover {
+  background: var(--c-superficie-2);
+}
+
+.total--enlace .total__etiqueta {
+  color: var(--c-acento);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ficha__aldia {
+  margin-top: var(--e-3);
+}
+
+.ficha__aldia > summary {
+  cursor: pointer;
+  padding: var(--e-2) 0;
+  font-size: var(--t-sm);
+  font-weight: 620;
+  color: var(--c-acento);
+  list-style: none;
+}
+
+.ficha__aldia > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ficha__aldia > summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform var(--transicion);
+}
+
+.ficha__aldia[open] > summary::before {
+  content: '▾ ';
+}
+
+.ficha__aldia .lista-vencimientos {
+  margin-top: var(--e-2);
+}

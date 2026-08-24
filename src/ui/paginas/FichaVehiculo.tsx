@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { borrarLectura } from '@/datos/acciones.ts';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { CATEGORIAS_VEHICULO, COMBUSTIBLES } from '@/dominio/catalogos.ts';
@@ -12,6 +12,7 @@ import { Boton, EnlaceBoton } from '../componentes/Boton.tsx';
 import { FormularioLectura } from '../componentes/FormularioLectura.tsx';
 import { FotoVehiculo } from '../componentes/FotoVehiculo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
+import { ListaVencimientos } from '../componentes/ListaVencimientos.tsx';
 import { useDetalleVehiculo, useLecturas } from '../ganchos/consultas.ts';
 import './FichaVehiculo.css';
 
@@ -55,9 +56,11 @@ export function FichaVehiculo(): React.JSX.Element {
     );
   }
 
-  const { vehiculo: v, estimacion, kmAlAnio, totales, puntos } = detalle;
+  const { vehiculo: v, estimacion, kmAlAnio, totales, puntos, vencimientos } = detalle;
   const vendido = v.estado === 'vendido';
   const estimado = esEstimacion(estimacion);
+  const pendientes = vencimientos.filter((x) => x.semaforo !== 'ok');
+  const alDia = vencimientos.filter((x) => x.semaforo === 'ok');
 
   async function eliminar(): Promise<void> {
     if (!id) return;
@@ -112,6 +115,48 @@ export function FichaVehiculo(): React.JSX.Element {
           </Boton>
         ) : null}
       </section>
+
+      {!vendido ? (
+        <section className="ficha__vencimientos">
+          <div className="ficha__vencimientos-cabecera">
+            <h2>Qué le toca</h2>
+            <EnlaceBoton a={`/vehiculos/${v.id}/reglas`} variante="sutil">
+              Cada cuánto toca
+            </EnlaceBoton>
+          </div>
+
+          {vencimientos.length === 0 ? (
+            <p className="ficha__sin-datos">
+              Sin reglas activas ni documentos con fecha. Ajusta las recurrencias o añade la
+              ITV y el seguro desde la ficha.
+            </p>
+          ) : (
+            <>
+              {pendientes.length > 0 ? (
+                <ListaVencimientos vencimientos={pendientes} />
+              ) : (
+                <p className="ficha__sin-datos">
+                  Nada pendiente entre {vencimientos.length} revisiones y documentos.
+                </p>
+              )}
+
+              {/*
+                Lo que está al día se pliega. Son la mayoría, y dejarlas
+                desplegadas empuja los datos del vehículo media pantalla hacia
+                abajo por información que, por definición, no hay que mirar.
+              */}
+              {alDia.length > 0 ? (
+                <details className="ficha__aldia">
+                  <summary>
+                    {alDia.length === 1 ? '1 más al día' : `${alDia.length} más al día`}
+                  </summary>
+                  <ListaVencimientos vencimientos={alDia} />
+                </details>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : null}
 
       <section className="ficha__resumen">
         <div className="dato">
@@ -174,10 +219,10 @@ export function FichaVehiculo(): React.JSX.Element {
             <span className="total__valor numero">{totales.repostajes}</span>
             <span className="total__etiqueta">repostajes</span>
           </div>
-          <div className="total">
+          <Link to={`/vehiculos/${v.id}/mantenimientos`} className="total total--enlace">
             <span className="total__valor numero">{totales.mantenimientos}</span>
             <span className="total__etiqueta">mantenimientos</span>
-          </div>
+          </Link>
           <div className="total">
             <span className="total__valor numero">{totales.gastos}</span>
             <span className="total__etiqueta">gastos</span>
@@ -240,6 +285,9 @@ export function FichaVehiculo(): React.JSX.Element {
 
       {/* ------------------------------------------------------------------ */}
       <section className="ficha__acciones">
+        <EnlaceBoton a={`/vehiculos/${v.id}/mantenimientos`} icono="🔧">
+          Mantenimientos
+        </EnlaceBoton>
         <EnlaceBoton a={`/vehiculos/${v.id}/editar`} icono="✎">
           Editar ficha
         </EnlaceBoton>
