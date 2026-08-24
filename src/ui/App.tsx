@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/datos/db.ts';
 import { repo } from '@/datos/repositorioDexie.ts';
-import { COMBUSTIBLES } from '@/dominio/catalogos.ts';
+import { CATEGORIAS_VEHICULO, COMBUSTIBLES } from '@/dominio/catalogos.ts';
 import { formatearEuros } from '@/dominio/dinero.ts';
 import { formatearFecha } from '@/dominio/fechas.ts';
 import { formatearKm } from '@/dominio/formato.ts';
 import type { Id, Vehiculo } from '@/dominio/tipos.ts';
+import { FotoVehiculo } from './componentes/FotoVehiculo.tsx';
 import { SelectorTema } from './componentes/SelectorTema.tsx';
 import './App.css';
 
@@ -74,10 +75,13 @@ function Contador({ etiqueta, valor }: { etiqueta: string; valor: number }): Rea
 function TarjetaVehiculo({ resumen }: { resumen: ResumenVehiculo }): React.JSX.Element {
   const { vehiculo: v } = resumen;
   const combustible = COMBUSTIBLES[v.combustible];
+  const categoria = CATEGORIAS_VEHICULO[v.categoria];
   const vendido = v.estado === 'vendido';
 
   return (
     <article className={`tarjeta tarjeta--vehiculo${vendido ? ' es-vendido' : ''}`}>
+      <FotoVehiculo vehiculo={v} />
+
       <header className="tarjeta__cabecera">
         <div>
           <h3 className="tarjeta__titulo">{v.alias}</h3>
@@ -97,22 +101,26 @@ function TarjetaVehiculo({ resumen }: { resumen: ResumenVehiculo }): React.JSX.E
           <dd className="numero">{v.matricula}</dd>
         </div>
         <div>
+          <dt>Categoría</dt>
+          <dd>
+            <span aria-hidden="true">{categoria.icono} </span>
+            {categoria.nombre}
+          </dd>
+        </div>
+        <div>
           <dt>Combustible</dt>
           <dd>
             <span aria-hidden="true">{combustible.icono} </span>
             {combustible.nombre}
           </dd>
         </div>
-        <div>
+        <div className="datos-clave__ancho">
           <dt>Última lectura</dt>
           <dd className="numero">
             {resumen.ultimoKm === null ? '—' : formatearKm(resumen.ultimoKm)}
-          </dd>
-        </div>
-        <div>
-          <dt>Fecha</dt>
-          <dd className="numero">
-            {resumen.ultimaFecha ? formatearFecha(resumen.ultimaFecha) : '—'}
+            {resumen.ultimaFecha ? (
+              <span className="datos-clave__apunte"> · {formatearFecha(resumen.ultimaFecha)}</span>
+            ) : null}
           </dd>
         </div>
       </dl>
@@ -156,10 +164,10 @@ export function App(): React.JSX.Element {
         <section className="intro">
           <h1>Modelo de datos y datos de ejemplo</h1>
           <p>
-            El esquema está creado en IndexedDB y sembrado con tres vehículos que ejercitan
+            El esquema está creado en IndexedDB y sembrado con cuatro vehículos que ejercitan
             caminos distintos del código: un diésel con historial denso, un eléctrico que
-            reposta en kWh y uno vendido con el histórico congelado. La interfaz real llega
-            en la fase 2.
+            reposta en kWh, una autocaravana cuyos mantenimientos vencen por tiempo y no por
+            uso, y uno vendido con el histórico congelado. La interfaz real llega en la fase 2.
           </p>
         </section>
 

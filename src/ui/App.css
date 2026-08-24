@@ -188,6 +188,15 @@
   margin-top: 1px;
 }
 
+.datos-clave__ancho {
+  grid-column: 1 / -1;
+}
+
+.datos-clave__apunte {
+  font-weight: 450;
+  color: var(--c-texto-tenue);
+}
+
 .contadores {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

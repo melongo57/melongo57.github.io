@@ -1,0 +1,66 @@
+.foto-vehiculo {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--tinte) 26%, var(--c-superficie)),
+      color-mix(in srgb, var(--tinte) 9%, var(--c-superficie))
+    );
+  color: var(--tinte);
+}
+
+/* Franja de suelo, para que la silueta no flote en el vacío. */
+.foto-vehiculo::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 12%;
+  background: color-mix(in srgb, var(--tinte) 22%, transparent);
+}
+
+.foto-vehiculo__imagen {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* La imagen real tapa la franja de suelo. */
+.foto-vehiculo:has(.foto-vehiculo__imagen)::after {
+  display: none;
+}
+
+.ilustracion-vehiculo {
+  width: min(76%, 260px);
+  height: auto;
+  /* Un pelo por encima de la franja de suelo, para que las ruedas la pisen. */
+  margin-bottom: 4%;
+  opacity: 0.82;
+}
+
+/*
+ * Cristales y llantas en el color de la superficie, no en el del vehículo:
+ * así se leen como huecos y la silueta deja de parecer una mancha.
+ */
+.ilustracion-vehiculo__detalles {
+  fill: var(--c-superficie);
+  opacity: 0.62;
+}
+
+/* Un vehículo vendido está congelado: se ve, pero no reclama atención. */
+.foto-vehiculo.es-vendido {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.tinte-1 { --tinte: var(--c-serie-1); }
+.tinte-2 { --tinte: var(--c-serie-2); }
+.tinte-3 { --tinte: var(--c-serie-3); }
+.tinte-4 { --tinte: var(--c-serie-4); }
+.tinte-5 { --tinte: var(--c-serie-5); }
+.tinte-6 { --tinte: var(--c-serie-6); }
