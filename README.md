@@ -134,10 +134,10 @@ kilómetros anotados en repostajes, mantenimientos y gastos, y devuelve una seri
 
 | Entidad | Notas |
 | --- | --- |
-| `Vehiculo` | Incluye `estado: 'activo' \| 'vendido'` con fecha, kilómetros y precio de venta. Un vehículo vendido se congela: no genera avisos ni cuenta en el gasto corriente, pero conserva su histórico. |
+| `Vehiculo` | Incluye `categoria` (turismo, autocaravana, furgoneta, moto) y `estado: 'activo' \| 'vendido'` con fecha, kilómetros y precio de venta. Un vehículo vendido se congela: no genera avisos ni cuenta en el gasto corriente, pero conserva su histórico. |
 | `LecturaOdometro` | Solo lecturas manuales, de alta y de venta. Los kilómetros de otros registros se unen al leer, no se copian. |
 | `Mantenimiento` | Tipo, fecha, km, taller, coste, piezas, notas y adjuntos. |
-| `ReglaMantenimiento` | Recurrencia doble `cadaKm` / `cadaMeses`, por vehículo. |
+| `ReglaMantenimiento` | Recurrencia doble `cadaKm` / `cadaMeses`, por vehículo. Las plantillas de partida salen de la categoría, no del combustible: ver más abajo. |
 | `Repostaje` | `cantidad` + `unidad` (`'l'` o `'kWh'`), lo que resuelve los eléctricos sin duplicar entidades. Guarda `depositoLleno` y `rupturaSerie` porque sin eso el consumo no se puede calcular bien. |
 | `Gasto` | Categoría, importe, fecha, recurrencia y periodicidad. |
 | `Documento` | Unión discriminada por `tipo`: el seguro tiene compañía y cobertura, la ITV tiene estación y resultado. |
@@ -152,9 +152,18 @@ formulario, rellenar dos calcula el tercero.
 (1,589 €/l) y el importe dos. Por eso `parsearDecimal` recibe cuántos decimales admite el
 campo: sin ese dato, «1,589» se leería como mil quinientos ochenta y nueve euros.
 
+**La categoría del vehículo manda sobre las recurrencias.** Una autocaravana hace 5.000 km
+al año: una regla de «aceite cada 15.000 km» tardaría tres años en dispararse mientras el
+aceite se degrada igual en el garaje. Por eso sus plantillas se apoyan en el tiempo, sus
+neumáticos caducan a los seis años aunque tengan dibujo, y tiene dos mantenimientos que no
+existen en un turismo: el **sellado del techo** (anual; una filtración sin detectar pudre la
+célula) y la **instalación de gas** (revisión obligatoria cada cinco años). Una moto, en el
+sentido contrario, cambia aceite cada 6.000 km. Ser eléctrico anula el aceite y la
+distribución sea cual sea la categoría.
+
 ## Datos de ejemplo
 
-La primera vez que se abre la app se cargan tres vehículos. No son decorativos: cada uno
+La primera vez que se abre la app se cargan cuatro vehículos. No son decorativos: cada uno
 ejercita un camino distinto del código, y las fechas se calculan a partir de *hoy*.
 
 - **El Golf** (Volkswagen, diésel) — 34 repostajes, mantenimientos, seguro e ITV. Incluye
@@ -163,6 +172,9 @@ ejercita un camino distinto del código, y las fechas se calculan a partir de *h
   panel principal tendrá rojo, ámbar y verde desde el primer momento.
 - **La Zoe** (Renault, eléctrico) — carga en kWh, con precios que van de 0,09 €/kWh en casa
   a 0,59 €/kWh en un cargador rápido. Sin reglas de aceite ni de distribución.
+- **La Autocaravana** (Benimar sobre Fiat Ducato) — 5.000 km al año en nueve repostajes,
+  el patrón que hace inútiles las reglas por kilómetros. Tiene el **sellado del techo
+  caducado**, que es el aviso que más caro sale ignorar.
 - **El Ibiza** (SEAT, gasolina) — **vendido**: histórico congelado y sin avisos.
 
 Los kilómetros de mantenimientos y lecturas se interpolan sobre la serie de repostajes, no
@@ -170,10 +182,10 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-77 tests en la fase 1, centrados en lo que puede fallar en silencio: aritmética de céntimos,
+93 tests en la fase 1, centrados en lo que puede fallar en silencio: aritmética de céntimos,
 fechas cruzando cambios de hora y años bisiestos, lectura de números en formato español,
-integridad del repositorio (cascadas, adjuntos huérfanos, orden del odómetro) y coherencia
-de los datos de ejemplo.
+integridad del repositorio (cascadas, adjuntos huérfanos, orden del odómetro), coherencia de
+los catálogos (ninguna regla puede quedarse sin poder vencer) y de los datos de ejemplo.
 
 ```bash
 npm test
