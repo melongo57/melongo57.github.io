@@ -9,7 +9,8 @@ import {
 import { parsearImporte } from '@/dominio/dinero.ts';
 import { esFechaISO, hoyISO } from '@/dominio/fechas.ts';
 import { parsearKm } from '@/dominio/formato.ts';
-import type { CategoriaGasto, Gasto, Periodicidad, Vehiculo } from '@/dominio/tipos.ts';
+import type { CategoriaGasto, Gasto, Id, Periodicidad, Vehiculo } from '@/dominio/tipos.ts';
+import { Adjuntos } from './Adjuntos.tsx';
 import { Boton } from './Boton.tsx';
 import { CampoArea, CampoFecha, CampoNumero, CampoSelector, CampoTexto, Interruptor } from './Campo.tsx';
 import './FormularioGasto.css';
@@ -37,6 +38,7 @@ export function FormularioGasto({
   const [recurrente, setRecurrente] = useState(gasto?.recurrente ?? false);
   const [periodicidad, setPeriodicidad] = useState<Periodicidad>(gasto?.periodicidad ?? 'anual');
   const [notas, setNotas] = useState(gasto?.notas ?? '');
+  const [adjuntoIds, setAdjuntoIds] = useState<Id[]>(gasto?.adjuntoIds ?? []);
 
   const [intentado, setIntentado] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -65,7 +67,7 @@ export function FormularioGasto({
       ...(recurrente ? { periodicidad } : {}),
       ...(kmNumero !== null ? { km: kmNumero } : {}),
       ...(notas.trim() ? { notas: notas.trim() } : {}),
-      adjuntoIds: gasto?.adjuntoIds ?? [],
+      adjuntoIds,
     });
     alTerminar();
   }
@@ -143,6 +145,8 @@ export function FormularioGasto({
           opciones={opciones(PERIODICIDADES, ORDEN_PERIODICIDAD)}
         />
       ) : null}
+
+      <Adjuntos ids={adjuntoIds} alCambiar={setAdjuntoIds} />
 
       <CampoArea etiqueta="Notas" valor={notas} alCambiar={setNotas} filas={2} />
 

@@ -1,6 +1,8 @@
 import { plantillaReglas } from '@/dominio/catalogos.ts';
 import type {
   Adjunto,
+  Cambios,
+  Documento,
   FechaISO,
   Gasto,
   Id,
@@ -277,4 +279,30 @@ export async function estacionesFrecuentes(vehiculoId: Id, cuantas = 4): Promise
     .sort((a, b) => b[1] - a[1])
     .slice(0, cuantas)
     .map(([nombre]) => nombre);
+}
+
+// ---------------------------------------------------------------------------
+// Documentos
+// ---------------------------------------------------------------------------
+
+export type DatosDocumento = Nuevo<Documento> & { id?: Id };
+
+export async function guardarDocumento(datos: DatosDocumento): Promise<Documento> {
+  if (datos.id) {
+    const { id, ...cambios } = datos;
+    return repo.documentos.actualizar(id, cambios as Cambios<Documento>);
+  }
+  return repo.documentos.crear(datos);
+}
+
+/**
+ * Borra un documento y, con él, sus adjuntos.
+ * Si no, las fotos del seguro viejo se quedan ocupando cuota para siempre.
+ */
+export async function borrarDocumento(id: Id): Promise<void> {
+  const documento = await repo.documentos.obtener(id);
+  await repo.documentos.borrar(id);
+  if (documento?.adjuntoIds.length) {
+    await Promise.all(documento.adjuntoIds.map((a) => repo.adjuntos.borrar(a)));
+  }
 }

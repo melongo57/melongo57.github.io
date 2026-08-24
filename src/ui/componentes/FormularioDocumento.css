@@ -1,0 +1,19 @@
+.form-doc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.form-doc__fallo {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-alerta-fondo);
+  border: 1px solid var(--c-alerta-borde);
+  color: var(--c-alerta);
+  font-size: var(--t-sm);
+}
+
+.form-doc__borrar {
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--c-borde);
+}

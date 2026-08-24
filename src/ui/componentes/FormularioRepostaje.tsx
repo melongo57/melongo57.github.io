@@ -6,8 +6,9 @@ import { parsearImporte } from '@/dominio/dinero.ts';
 import { hoyISO } from '@/dominio/fechas.ts';
 import { parsearCantidad, parsearKm, parsearPrecioUnitario } from '@/dominio/formato.ts';
 import { kmEnFecha } from '@/dominio/odometro.ts';
-import type { PuntoOdometro, Repostaje, UnidadEnergia, Vehiculo } from '@/dominio/tipos.ts';
+import type { Id, PuntoOdometro, Repostaje, UnidadEnergia, Vehiculo } from '@/dominio/tipos.ts';
 import { incidenciasDe, validarLectura } from '@/dominio/validacion.ts';
+import { Adjuntos } from './Adjuntos.tsx';
 import { Boton } from './Boton.tsx';
 import { CampoFecha, CampoNumero, CampoTexto, Interruptor } from './Campo.tsx';
 import './FormularioRepostaje.css';
@@ -65,6 +66,7 @@ export function FormularioRepostaje({
   const [lleno, setLleno] = useState(repostaje?.depositoLleno ?? true);
   const [ruptura, setRuptura] = useState(repostaje?.rupturaSerie ?? false);
   const [estacion, setEstacion] = useState(repostaje?.estacion ?? '');
+  const [adjuntoIds, setAdjuntoIds] = useState<Id[]>(repostaje?.adjuntoIds ?? []);
   const [intentado, setIntentado] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -166,7 +168,7 @@ export function FormularioRepostaje({
       depositoLleno: lleno,
       rupturaSerie: ruptura,
       ...(estacion.trim() ? { estacion: estacion.trim() } : {}),
-      adjuntoIds: repostaje?.adjuntoIds ?? [],
+      adjuntoIds,
     });
     alTerminar();
   }
@@ -298,7 +300,8 @@ export function FormularioRepostaje({
       ) : null}
 
       <details className="form-repostaje__avanzado">
-        <summary>Algo no cuadra</summary>
+        <summary>Ticket y ajustes</summary>
+        <Adjuntos ids={adjuntoIds} alCambiar={setAdjuntoIds} />
         <Interruptor
           etiqueta="Me salté algún repostaje sin anotarlo"
           ayuda="Corta la serie de consumo en este punto en vez de dar una cifra imposible."

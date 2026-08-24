@@ -5,8 +5,9 @@ import { parsearImporte } from '@/dominio/dinero.ts';
 import { hoyISO } from '@/dominio/fechas.ts';
 import { parsearKm } from '@/dominio/formato.ts';
 import { kmEnFecha } from '@/dominio/odometro.ts';
-import type { Mantenimiento, PuntoOdometro, TipoMantenimiento, Vehiculo } from '@/dominio/tipos.ts';
+import type { Id, Mantenimiento, PuntoOdometro, TipoMantenimiento, Vehiculo } from '@/dominio/tipos.ts';
 import { incidenciasDe, validarMantenimiento } from '@/dominio/validacion.ts';
+import { Adjuntos } from './Adjuntos.tsx';
 import { Boton } from './Boton.tsx';
 import { CampoArea, CampoFecha, CampoNumero, CampoSelector, CampoTexto } from './Campo.tsx';
 import './FormularioMantenimiento.css';
@@ -45,6 +46,7 @@ export function FormularioMantenimiento({
   );
   const [piezas, setPiezas] = useState((mantenimiento?.piezas ?? []).join(', '));
   const [notas, setNotas] = useState(mantenimiento?.notas ?? '');
+  const [adjuntoIds, setAdjuntoIds] = useState<Id[]>(mantenimiento?.adjuntoIds ?? []);
 
   const [intentado, setIntentado] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
@@ -108,7 +110,7 @@ export function FormularioMantenimiento({
         .map((p) => p.trim())
         .filter(Boolean),
       ...(notas.trim() ? { notas: notas.trim() } : {}),
-      adjuntoIds: mantenimiento?.adjuntoIds ?? [],
+      adjuntoIds,
     });
     alTerminar();
   }
@@ -203,6 +205,8 @@ export function FormularioMantenimiento({
         alCambiar={setPiezas}
         marcador="Aceite 5W30 5 l, Filtro de aceite"
       />
+
+      <Adjuntos ids={adjuntoIds} alCambiar={setAdjuntoIds} />
 
       <CampoArea etiqueta="Notas" valor={notas} alCambiar={setNotas} filas={2} />
 

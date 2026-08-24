@@ -1,0 +1,106 @@
+.adjuntos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.adjuntos__titulo {
+  font-size: var(--t-xs);
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-texto-suave);
+}
+
+.adjuntos__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: var(--e-3);
+}
+
+.adjunto {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--c-superficie-2);
+}
+
+.adjunto__enlace {
+  display: block;
+  aspect-ratio: 4 / 3;
+}
+
+.adjunto__vista {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adjunto__icono {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: var(--t-2xl);
+}
+
+.adjunto__pie {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--e-2);
+  border-top: 1px solid var(--c-borde);
+  background: var(--c-superficie);
+}
+
+.adjunto__nombre {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adjunto__peso {
+  font-size: 10px;
+  color: var(--c-texto-tenue);
+}
+
+/* El botón de quitar se superpone a la miniatura, con contraste propio para
+   que se vea sobre cualquier foto. */
+.adjunto__quitar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-full);
+  background: rgba(12, 10, 9, 0.66);
+  color: #fff;
+  font-size: var(--t-sm);
+  backdrop-filter: blur(4px);
+}
+
+.adjunto__quitar:hover {
+  background: var(--c-alerta);
+}
+
+.adjuntos__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.adjuntos__fallo {
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-alerta-fondo);
+  border: 1px solid var(--c-alerta-borde);
+  color: var(--c-alerta);
+  font-size: var(--t-sm);
+}
