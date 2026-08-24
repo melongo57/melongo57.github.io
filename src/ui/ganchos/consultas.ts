@@ -22,6 +22,11 @@ import {
   type GastoPorCategoria,
 } from '@/dominio/costes.ts';
 import { unidadesDe } from '@/dominio/catalogos.ts';
+import {
+  eventosDeGastos,
+  eventosDeVencimientos,
+  type EventoCalendario,
+} from '@/dominio/calendario.ts';
 import { estacionesFrecuentes } from '@/datos/acciones.ts';
 import type {
   Centimos,
@@ -307,4 +312,46 @@ export function useAnalisis(vehiculoId: Id | undefined): AnalisisVehiculo | unde
       porCategoria: gastoPorCategoria(entrada),
     };
   }, [vehiculoId]);
+}
+
+// ---------------------------------------------------------------------------
+// Agenda y avisos
+// ---------------------------------------------------------------------------
+
+/**
+ * Todo lo que tiene fecha en los próximos meses, de todos los vehículos
+ * activos, ordenado cronológicamente.
+ */
+export function useAgenda(): EventoCalendario[] | undefined {
+  return useLiveQuery(async () => {
+    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const activos = vehiculos.filter((v) => v.estado === 'activo');
+
+    const porVehiculo = await Promise.all(
+      activos.map(async (vehiculo) => {
+        const [{ vencimientos }, gastos] = await Promise.all([
+          cargarParaVencimientos(vehiculo),
+          repo.gastos.listarPorVehiculo(vehiculo.id),
+        ]);
+        return [
+          ...eventosDeVencimientos(vehiculo, vencimientos),
+          ...eventosDeGastos(vehiculo, gastos),
+        ];
+      }),
+    );
+
+    return porVehiculo.flat().sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  }, []);
+}
+
+/** Todos los vencimientos de todos los vehículos activos, para las notificaciones. */
+export function useTodosLosVencimientos(): Vencimiento[] | undefined {
+  return useLiveQuery(async () => {
+    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const activos = vehiculos.filter((v) => v.estado === 'activo');
+    const listas = await Promise.all(
+      activos.map(async (v) => (await cargarParaVencimientos(v)).vencimientos),
+    );
+    return listas.flat().sort((a, b) => a.urgencia - b.urgencia);
+  }, []);
 }

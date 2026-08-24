@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { IconoAjustes, IconoPanel, IconoVehiculos } from './iconos.tsx';
+import { useAvisosAlArrancar } from '../componentes/AvisoNotificaciones.tsx';
+import { IconoAgenda, IconoAjustes, IconoPanel, IconoVehiculos } from './iconos.tsx';
 import './Disposicion.css';
 
 interface Destino {
@@ -11,6 +12,7 @@ interface Destino {
 const DESTINOS: readonly Destino[] = [
   { a: '/', nombre: 'Panel', Icono: IconoPanel },
   { a: '/vehiculos', nombre: 'Vehículos', Icono: IconoVehiculos },
+  { a: '/agenda', nombre: 'Agenda', Icono: IconoAgenda },
   { a: '/ajustes', nombre: 'Ajustes', Icono: IconoAjustes },
 ];
 
@@ -45,6 +47,9 @@ function Navegacion({ lugar }: { lugar: 'cabecera' | 'inferior' }): React.JSX.El
 export function Disposicion(): React.JSX.Element {
   const { pathname } = useLocation();
   const navegar = useNavigate();
+
+  // Avisa de lo que vence nada más abrir la app, si hay permiso concedido.
+  useAvisosAlArrancar();
 
   // En detalle y formularios, la cabecera cambia el logotipo por «atrás».
   const esRaiz = DESTINOS.some((d) => d.a === pathname);

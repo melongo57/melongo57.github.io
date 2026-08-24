@@ -1,0 +1,118 @@
+.documentos {
+  max-width: 760px;
+}
+
+.documentos__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.documentos__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.documentos__sub {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.documentos__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.doc-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  width: 100%;
+  padding: var(--e-3);
+  text-align: left;
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-left-width: 4px;
+  border-left-color: var(--c-borde);
+  border-radius: var(--r-md);
+  transition: border-color var(--transicion), background var(--transicion);
+}
+
+.doc-fila:hover {
+  background: var(--c-superficie-2);
+}
+
+/* Mismo semáforo que el resto de la app, para no inventar un lenguaje nuevo. */
+.doc-fila.es-vencido {
+  border-color: var(--c-alerta-borde);
+  border-left-color: var(--c-alerta);
+  background: var(--c-alerta-fondo);
+}
+
+.doc-fila.es-proximo {
+  border-color: var(--c-aviso-borde);
+  border-left-color: var(--c-aviso);
+  background: var(--c-aviso-fondo);
+}
+
+.doc-fila.es-ok {
+  border-left-color: var(--c-ok);
+}
+
+.doc-fila__icono {
+  flex-shrink: 0;
+  font-size: var(--t-md);
+  line-height: 1.4;
+}
+
+.doc-fila__cuerpo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.doc-fila__titulo {
+  font-weight: 620;
+}
+
+.doc-fila__detalle {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.doc-fila__adjuntos {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+.doc-fila__derecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.doc-fila__fecha {
+  font-weight: 620;
+  font-size: var(--t-sm);
+}
+
+.doc-fila__plazo {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+.es-vencido .doc-fila__plazo {
+  color: var(--c-alerta);
+  font-weight: 620;
+}
+
+.es-proximo .doc-fila__plazo {
+  color: var(--c-aviso);
+  font-weight: 620;
+}

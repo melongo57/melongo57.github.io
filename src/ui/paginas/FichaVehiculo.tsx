@@ -128,8 +128,8 @@ export function FichaVehiculo(): React.JSX.Element {
 
           {vencimientos.length === 0 ? (
             <p className="ficha__sin-datos">
-              Sin reglas activas ni documentos con fecha. Ajusta las recurrencias o añade la
-              ITV y el seguro desde la ficha.
+              Sin reglas activas ni documentos con fecha. Añade la ITV y el seguro desde
+              «Documentos», o ajusta las recurrencias.
             </p>
           ) : (
             <>
@@ -228,10 +228,10 @@ export function FichaVehiculo(): React.JSX.Element {
             <span className="total__valor numero">{totales.gastos}</span>
             <span className="total__etiqueta">gastos</span>
           </Link>
-          <div className="total">
+          <Link to={`/vehiculos/${v.id}/documentos`} className="total total--enlace">
             <span className="total__valor numero">{totales.documentos}</span>
             <span className="total__etiqueta">documentos</span>
-          </div>
+          </Link>
         </div>
         <p className="ficha__gastado">
           Gasto acumulado{' '}
@@ -370,6 +370,9 @@ export function FichaVehiculo(): React.JSX.Element {
         </EnlaceBoton>
         <EnlaceBoton a={`/vehiculos/${v.id}/gastos`} icono="💶">
           Gastos
+        </EnlaceBoton>
+        <EnlaceBoton a={`/vehiculos/${v.id}/documentos`} icono="🗂️">
+          Documentos
         </EnlaceBoton>
         <EnlaceBoton a={`/vehiculos/${v.id}/editar`} icono="✎">
           Editar ficha

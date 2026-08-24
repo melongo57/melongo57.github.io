@@ -51,3 +51,13 @@ export function IconoAjustes(): React.JSX.Element {
     </svg>
   );
 }
+
+export function IconoAgenda(): React.JSX.Element {
+  return (
+    <svg {...COMUN} className="icono">
+      <rect x="3" y="5" width="18" height="16" rx="2.4" />
+      <path d="M3 9.8h18M8 3v4M16 3v4" />
+      <path d="M7.6 13.6h2.2M14.2 13.6h2.2M7.6 17.2h2.2M14.2 17.2h2.2" />
+    </svg>
+  );
+}

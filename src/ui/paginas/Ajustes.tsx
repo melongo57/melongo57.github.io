@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { cargarDatosEjemplo } from '@/datos/semilla.ts';
 import type { Tema } from '@/dominio/tipos.ts';
+import { AvisoNotificaciones } from '../componentes/AvisoNotificaciones.tsx';
 import { Boton } from '../componentes/Boton.tsx';
 import { CampoSelector } from '../componentes/Campo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
@@ -58,6 +59,11 @@ export function Ajustes(): React.JSX.Element {
       </section>
 
       <section className="bloque">
+        <h2 className="bloque__titulo">Avisos</h2>
+        <AvisoNotificaciones />
+      </section>
+
+      <section className="bloque">
         <h2 className="bloque__titulo">Tus datos</h2>
         <p className="ajustes__texto">
           Todo se guarda en este navegador y no sale de aquí. Ahora mismo hay{' '}
@@ -79,9 +85,9 @@ export function Ajustes(): React.JSX.Element {
       <section className="bloque">
         <h2 className="bloque__titulo">Sobre esta versión</h2>
         <p className="ajustes__texto">
-          Fase 2 de 7. Funcionan el alta de vehículos y el registro de kilómetros. Los
-          mantenimientos y sus vencimientos llegan en la fase 3; repostajes y gastos, en la
-          cuarta.
+          Fase 5 de 7. Funcionan vehículos, kilómetros, mantenimientos con recurrencias,
+          repostajes, gastos, documentos y adjuntos. Faltan las gráficas y la exportación
+          completa de tus datos.
         </p>
       </section>
 

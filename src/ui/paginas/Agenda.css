@@ -1,0 +1,138 @@
+.agenda {
+  max-width: 720px;
+}
+
+.agenda__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.agenda__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.agenda__sub {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/* Explicar la limitación es parte de la función: prometer avisos que no van a
+   llegar es peor que no ofrecerlos. */
+.agenda__explica {
+  padding: var(--e-4);
+  margin-bottom: var(--e-5);
+  border-radius: var(--r-lg);
+  background: var(--c-acento-suave);
+  border: 1px solid var(--c-acento-borde);
+  color: var(--c-acento);
+  font-size: var(--t-sm);
+}
+
+.agenda__explica code {
+  padding: 1px 5px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--c-acento) 14%, transparent);
+  font-size: 0.92em;
+}
+
+.agenda__matiz {
+  margin-top: var(--e-2);
+  opacity: 0.85;
+}
+
+.agenda__descargado {
+  padding: var(--e-3);
+  margin-bottom: var(--e-4);
+  border-radius: var(--r-md);
+  background: var(--c-ok-fondo);
+  border: 1px solid var(--c-ok-borde);
+  color: var(--c-ok);
+  font-size: var(--t-sm);
+}
+
+.agenda__meses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-5);
+}
+
+.agenda__mes-titulo {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+  margin-bottom: var(--e-3);
+}
+
+.agenda__mes-titulo::first-letter {
+  text-transform: uppercase;
+}
+
+.agenda__eventos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.agenda-evento {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-md);
+  transition: border-color var(--transicion);
+}
+
+.agenda-evento:hover {
+  border-color: var(--c-acento-borde);
+}
+
+.agenda-evento.es-vencido {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+}
+
+/* El día del mes, grande, para poder recorrer la lista con la vista. */
+.agenda-evento__dia {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.es-vencido .agenda-evento__dia {
+  background: var(--c-alerta);
+  color: var(--c-superficie);
+}
+
+:root[data-tema='oscuro'] .es-vencido .agenda-evento__dia {
+  color: var(--c-fondo);
+}
+
+.agenda-evento__cuerpo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.agenda-evento__titulo {
+  font-weight: 620;
+  line-height: 1.25;
+}
+
+.agenda-evento__meta {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
