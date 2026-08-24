@@ -1,0 +1,39 @@
+.form-mant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.form-mant__fallo,
+.form-mant__confirmar {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  border: 1px solid;
+  font-size: var(--t-sm);
+}
+
+.form-mant__fallo {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}
+
+.form-mant__confirmar {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  color: var(--c-aviso);
+}
+
+/* El borrado vive apartado del flujo principal, para no pulsarlo sin querer. */
+.form-mant__borrar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--c-borde);
+}
+
+.form-mant__borrar p {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}

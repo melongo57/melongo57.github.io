@@ -1,0 +1,98 @@
+.mantenimientos {
+  max-width: 760px;
+}
+
+.mantenimientos__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.mantenimientos__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.mantenimientos__sub {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.mantenimientos__total {
+  margin-bottom: var(--e-3);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.mantenimientos__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+/*
+ * Toda la fila es el botón de edición. Un icono de lápiz de 24 px al final de
+ * la fila es un objetivo diminuto en un móvil; la fila entera son 60 px de
+ * alto y no hay forma de fallar.
+ */
+.mant-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  width: 100%;
+  padding: var(--e-3);
+  text-align: left;
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-md);
+  transition: border-color var(--transicion), background var(--transicion);
+}
+
+.mant-fila:hover {
+  border-color: var(--c-acento-borde);
+  background: var(--c-superficie-2);
+}
+
+.mant-fila:active {
+  transform: scale(0.995);
+}
+
+.mant-fila__icono {
+  flex-shrink: 0;
+  font-size: var(--t-md);
+  line-height: 1.4;
+}
+
+.mant-fila__cuerpo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.mant-fila__titulo {
+  font-weight: 620;
+}
+
+.mant-fila__meta {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.mant-fila__taller,
+.mant-fila__piezas,
+.mant-fila__notas {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+.mant-fila__piezas {
+  font-style: italic;
+}
+
+.mant-fila__coste {
+  flex-shrink: 0;
+  font-weight: 650;
+}
