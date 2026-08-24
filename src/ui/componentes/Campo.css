@@ -1,0 +1,223 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  min-width: 0;
+}
+
+.campo--ancho {
+  grid-column: 1 / -1;
+}
+
+.campo__etiqueta {
+  font-size: var(--t-xs);
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-texto-suave);
+}
+
+.campo__ayuda {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.campo__incidencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin-top: var(--e-1);
+}
+
+.campo__incidencia {
+  font-size: var(--t-sm);
+  line-height: 1.4;
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-sm);
+  border: 1px solid;
+}
+
+.campo__incidencia.es-error {
+  color: var(--c-alerta);
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+}
+
+.campo__incidencia.es-aviso {
+  color: var(--c-aviso);
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+}
+
+/* --------------------------------------------------------------------------
+ * Controles
+ * ------------------------------------------------------------------------ */
+
+.control {
+  width: 100%;
+  min-height: var(--tactil);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-md);
+  color: var(--c-texto);
+  background: var(--c-superficie);
+  border: 1.5px solid var(--c-borde-fuerte);
+  border-radius: var(--r-md);
+  transition: border-color var(--transicion), box-shadow var(--transicion);
+}
+
+.control::placeholder {
+  color: var(--c-texto-tenue);
+}
+
+.control:focus-visible {
+  outline: none;
+  border-color: var(--c-acento);
+  box-shadow: 0 0 0 3px var(--c-acento-suave);
+}
+
+.es-error .control {
+  border-color: var(--c-alerta);
+}
+
+.control--area {
+  min-height: 0;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.control--selector {
+  /* Flecha propia: la nativa de Windows no respeta el tema oscuro. */
+  appearance: none;
+  padding-right: var(--e-6);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 22px center, right 16px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* --- Campo numérico con sufijo --- */
+
+.control--compuesto {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+
+.control--compuesto:focus-within {
+  border-color: var(--c-acento);
+  box-shadow: 0 0 0 3px var(--c-acento-suave);
+}
+
+.control__entrada {
+  flex: 1;
+  min-width: 0;
+  padding: var(--e-2) var(--e-3);
+  background: none;
+  border: none;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.control__entrada:focus-visible {
+  outline: none;
+}
+
+.control__sufijo {
+  display: grid;
+  place-items: center;
+  padding-inline: var(--e-3);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--c-texto-tenue);
+  background: var(--c-superficie-2);
+  border-left: 1px solid var(--c-borde);
+}
+
+/*
+ * Campos grandes: los que se rellenan de pie, con una mano, en la gasolinera.
+ * El tamaño no es estética, es poder acertar sin mirar dos veces.
+ */
+.control--compuesto.es-grande {
+  min-height: 60px;
+}
+
+.control--compuesto.es-grande .control__entrada {
+  font-size: var(--t-xl);
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+/* --------------------------------------------------------------------------
+ * Interruptor
+ * ------------------------------------------------------------------------ */
+
+.interruptor__entrada {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.interruptor__etiqueta {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-height: var(--tactil);
+  cursor: pointer;
+  font-size: var(--t-base);
+}
+
+.interruptor__pista {
+  flex-shrink: 0;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie-3);
+  border: 1px solid var(--c-borde-fuerte);
+  transition: background var(--transicion), border-color var(--transicion);
+}
+
+.interruptor__bola {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie);
+  box-shadow: var(--sombra-1);
+  transition: transform var(--transicion);
+}
+
+.interruptor__entrada:checked + .interruptor__etiqueta .interruptor__pista {
+  background: var(--c-acento);
+  border-color: var(--c-acento);
+}
+
+.interruptor__entrada:checked + .interruptor__etiqueta .interruptor__bola {
+  transform: translateX(18px);
+}
+
+.interruptor__entrada:focus-visible + .interruptor__etiqueta .interruptor__pista {
+  outline: 3px solid var(--c-acento);
+  outline-offset: 2px;
+}
+
+.interruptor__ayuda {
+  display: block;
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+/* --------------------------------------------------------------------------
+ * Rejilla de formulario
+ * ------------------------------------------------------------------------ */
+
+.rejilla-campos {
+  display: grid;
+  gap: var(--e-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}

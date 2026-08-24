@@ -1,0 +1,96 @@
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-2);
+  min-height: var(--tactil);
+  padding: 0 var(--e-4);
+  border-radius: var(--r-md);
+  border: 1.5px solid transparent;
+  font-size: var(--t-base);
+  font-weight: 620;
+  text-align: center;
+  white-space: nowrap;
+  transition: background var(--transicion), border-color var(--transicion),
+    transform var(--transicion), opacity var(--transicion);
+}
+
+.boton.es-ancho {
+  width: 100%;
+}
+
+.boton:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boton__icono {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.boton--principal {
+  background: var(--c-acento);
+  color: var(--c-sobre-acento);
+}
+
+.boton--principal:hover:not(:disabled) {
+  background: var(--c-acento-fuerte);
+}
+
+.boton--secundario {
+  background: var(--c-superficie);
+  border-color: var(--c-borde-fuerte);
+  color: var(--c-texto);
+}
+
+.boton--secundario:hover:not(:disabled) {
+  background: var(--c-superficie-2);
+}
+
+.boton--sutil {
+  background: none;
+  color: var(--c-texto-suave);
+}
+
+.boton--sutil:hover:not(:disabled) {
+  background: var(--c-superficie-2);
+  color: var(--c-texto);
+}
+
+.boton--peligro {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}
+
+.boton--peligro:hover:not(:disabled) {
+  background: var(--c-alerta);
+  border-color: var(--c-alerta);
+  color: var(--c-superficie);
+}
+
+:root[data-tema='oscuro'] .boton--peligro:hover:not(:disabled) {
+  color: var(--c-fondo);
+}
+
+/* Fila de botones que se apila en móvil, con el principal arriba. */
+.fila-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+}
+
+.fila-botones > * {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 480px) {
+  .fila-botones {
+    flex-direction: column-reverse;
+  }
+}

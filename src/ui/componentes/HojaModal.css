@@ -1,0 +1,118 @@
+.hoja {
+  /* El <dialog> ocupa toda la pantalla y hace de fondo pulsable. */
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  overflow: hidden;
+}
+
+.hoja::backdrop {
+  background: rgba(12, 10, 9, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.hoja:not([open]) {
+  display: none;
+}
+
+.hoja__panel {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-superficie);
+  border-top: 1px solid var(--c-borde);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--sombra-3);
+  animation: hoja-entra 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@keyframes hoja-entra {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+.hoja__cabecera {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  padding: var(--e-5) var(--e-4) var(--e-3);
+  border-bottom: 1px solid var(--c-borde);
+}
+
+/* Tirador: la señal de que el panel se puede arrastrar hacia abajo. */
+.hoja__tirador {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--c-borde-fuerte);
+}
+
+.hoja__titulo {
+  font-size: var(--t-lg);
+}
+
+.hoja__cerrar {
+  display: grid;
+  place-items: center;
+  width: var(--tactil);
+  height: var(--tactil);
+  margin: calc(var(--e-2) * -1);
+  border-radius: var(--r-full);
+  color: var(--c-texto-suave);
+  font-size: var(--t-md);
+}
+
+.hoja__cerrar:hover {
+  background: var(--c-superficie-2);
+  color: var(--c-texto);
+}
+
+.hoja__cuerpo {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--e-4);
+  padding-bottom: calc(var(--e-4) + var(--seguro-abajo));
+}
+
+/* En escritorio deja de ser un panel inferior y pasa a diálogo centrado. */
+@media (min-width: 700px) {
+  .hoja__panel {
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100vw - var(--e-6)));
+    max-height: 86dvh;
+    border: 1px solid var(--c-borde);
+    border-radius: var(--r-xl);
+  }
+
+  @keyframes hoja-entra {
+    from {
+      transform: translate(-50%, calc(-50% + 12px));
+      opacity: 0;
+    }
+  }
+
+  .hoja__tirador {
+    display: none;
+  }
+
+  .hoja__cabecera {
+    padding-top: var(--e-4);
+  }
+}

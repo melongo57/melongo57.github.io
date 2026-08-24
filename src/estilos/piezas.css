@@ -1,0 +1,100 @@
+/*
+ * Piezas compartidas por varias pantallas.
+ *
+ * Viven aquí y no en el CSS de una página concreta para que ninguna pantalla
+ * dependa de que otra se haya cargado antes. Todo lo que use más de un sitio
+ * acaba en este fichero.
+ */
+
+/* Bloque de contenido con borde: la unidad básica de agrupación. */
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+}
+
+.bloque__titulo {
+  font-size: var(--t-sm);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--c-texto-tenue);
+}
+
+/* Etiqueta corta de estado. */
+.chip {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  background: var(--c-ok-fondo);
+  border: 1px solid var(--c-ok-borde);
+  color: var(--c-ok);
+}
+
+.chip--tenue {
+  background: var(--c-superficie-3);
+  border-color: var(--c-borde-fuerte);
+  color: var(--c-texto-tenue);
+}
+
+.chip--acento {
+  background: var(--c-acento-suave);
+  border-color: var(--c-acento-borde);
+  color: var(--c-acento);
+}
+
+.chip--aviso {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  color: var(--c-aviso);
+}
+
+.chip--alerta {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}
+
+/* Estado de carga. */
+.cargando {
+  padding-block: var(--e-6);
+  color: var(--c-texto-tenue);
+}
+
+/* Estado vacío: explica qué falta y ofrece la salida. */
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e-3);
+  max-width: 44ch;
+  margin: var(--e-7) auto;
+  padding: var(--e-6) var(--e-4);
+  text-align: center;
+  background: var(--c-superficie);
+  border: 1px dashed var(--c-borde-fuerte);
+  border-radius: var(--r-lg);
+}
+
+.vacio__icono {
+  font-size: var(--t-3xl);
+  line-height: 1;
+}
+
+.vacio h2 {
+  font-size: var(--t-lg);
+}
+
+.vacio p {
+  color: var(--c-texto-suave);
+}
+
+.vacio .boton {
+  margin-top: var(--e-2);
+}
