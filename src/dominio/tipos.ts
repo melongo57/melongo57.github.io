@@ -82,8 +82,20 @@ export type TipoCombustible =
 
 export type EstadoVehiculo = 'activo' | 'vendido';
 
+/**
+ * Categoría del vehículo. No es decorativa: determina qué plantilla de
+ * recurrencias de mantenimiento se aplica.
+ *
+ * Una autocaravana hace 5.000 km al año, así que sus reglas por kilómetros
+ * casi nunca disparan y manda el tiempo; además tiene mantenimientos que un
+ * turismo no tiene (sellado del techo, instalación de gas). Una moto gasta
+ * aceite cada 5.000 km, no cada 15.000.
+ */
+export type CategoriaVehiculo = 'turismo' | 'autocaravana' | 'furgoneta' | 'moto' | 'otro';
+
 export interface Vehiculo extends EntidadBase {
   alias: string;
+  categoria: CategoriaVehiculo;
   marca: string;
   modelo: string;
   version?: string;
@@ -166,6 +178,10 @@ export type TipoMantenimiento =
   | 'distribucion'
   | 'bateria'
   | 'revision_general'
+  // Propios de autocaravanas y campers. El sellado del techo es el que de
+  // verdad importa: una filtración sin detectar se come la célula entera.
+  | 'sellado_techo'
+  | 'instalacion_gas'
   | 'otro';
 
 export interface Mantenimiento extends EntidadBase {

@@ -1,6 +1,7 @@
 import type {
   AntelacionAviso,
   CategoriaGasto,
+  CategoriaVehiculo,
   CoberturaSeguro,
   Periodicidad,
   TipoCombustible,
@@ -21,6 +22,26 @@ export interface Etiqueta {
   readonly nombre: string;
   readonly icono: string;
 }
+
+// ---------------------------------------------------------------------------
+// Categoría de vehículo
+// ---------------------------------------------------------------------------
+
+export const CATEGORIAS_VEHICULO: Record<CategoriaVehiculo, Etiqueta> = {
+  turismo: { clave: 'turismo', nombre: 'Turismo', icono: '🚗' },
+  autocaravana: { clave: 'autocaravana', nombre: 'Autocaravana', icono: '🚐' },
+  furgoneta: { clave: 'furgoneta', nombre: 'Furgoneta', icono: '🚚' },
+  moto: { clave: 'moto', nombre: 'Moto', icono: '🏍️' },
+  otro: { clave: 'otro', nombre: 'Otro', icono: '🚙' },
+};
+
+export const ORDEN_CATEGORIA_VEHICULO: readonly CategoriaVehiculo[] = [
+  'turismo',
+  'autocaravana',
+  'furgoneta',
+  'moto',
+  'otro',
+];
 
 // ---------------------------------------------------------------------------
 // Combustible
@@ -67,6 +88,8 @@ export const TIPOS_MANTENIMIENTO: Record<TipoMantenimiento, Etiqueta> = {
   distribucion: { clave: 'distribucion', nombre: 'Correa o cadena de distribución', icono: '⚙️' },
   bateria: { clave: 'bateria', nombre: 'Batería', icono: '🔋' },
   revision_general: { clave: 'revision_general', nombre: 'Revisión general', icono: '🔧' },
+  sellado_techo: { clave: 'sellado_techo', nombre: 'Sellado del techo', icono: '💧' },
+  instalacion_gas: { clave: 'instalacion_gas', nombre: 'Instalación de gas', icono: '🔥' },
   otro: { clave: 'otro', nombre: 'Otro', icono: '📋' },
 };
 
@@ -78,6 +101,8 @@ export const ORDEN_MANTENIMIENTO: readonly TipoMantenimiento[] = [
   'distribucion',
   'bateria',
   'revision_general',
+  'sellado_techo',
+  'instalacion_gas',
   'otro',
 ];
 
@@ -86,12 +111,14 @@ export interface PlantillaRegla {
   readonly cadaMeses?: number;
 }
 
+type Plantilla = Record<TipoMantenimiento, PlantillaRegla | null>;
+
 /**
  * Recurrencias de partida al dar de alta un vehículo. Son un punto de arranque
- * razonable para un turismo actual, no el libro de mantenimiento del
- * fabricante: se editan por vehículo desde la ficha.
+ * razonable, no el libro de mantenimiento del fabricante: se editan por
+ * vehículo desde su ficha.
  */
-const REGLAS_COMBUSTION: Record<TipoMantenimiento, PlantillaRegla | null> = {
+const TURISMO: Plantilla = {
   aceite: { cadaKm: 15000, cadaMeses: 12 },
   filtros: { cadaKm: 30000, cadaMeses: 24 },
   neumaticos: { cadaKm: 40000, cadaMeses: 60 },
@@ -99,6 +126,8 @@ const REGLAS_COMBUSTION: Record<TipoMantenimiento, PlantillaRegla | null> = {
   distribucion: { cadaKm: 120000, cadaMeses: 120 },
   bateria: { cadaMeses: 60 },
   revision_general: { cadaKm: 20000, cadaMeses: 12 },
+  sellado_techo: null,
+  instalacion_gas: null,
   otro: null,
 };
 
@@ -106,7 +135,7 @@ const REGLAS_COMBUSTION: Record<TipoMantenimiento, PlantillaRegla | null> = {
  * Un eléctrico no lleva aceite motor, ni filtros de combustible, ni correa de
  * distribución. Los frenos duran mucho más por la retención regenerativa.
  */
-const REGLAS_ELECTRICO: Record<TipoMantenimiento, PlantillaRegla | null> = {
+const ELECTRICO: Plantilla = {
   aceite: null,
   filtros: { cadaMeses: 24 },
   neumaticos: { cadaKm: 35000, cadaMeses: 60 },
@@ -114,13 +143,87 @@ const REGLAS_ELECTRICO: Record<TipoMantenimiento, PlantillaRegla | null> = {
   distribucion: null,
   bateria: { cadaMeses: 24 },
   revision_general: { cadaKm: 30000, cadaMeses: 24 },
+  sellado_techo: null,
+  instalacion_gas: null,
   otro: null,
 };
 
+/**
+ * Autocaravana. Aquí manda el TIEMPO, no los kilómetros: una autocaravana
+ * hace 5.000 km al año, así que una regla de «cada 15.000 km» tardaría tres
+ * años en dispararse mientras el aceite se degrada igual en el garaje.
+ *
+ * Dos mantenimientos propios que no existen en un turismo:
+ *  - Sellado del techo: revisión anual. Una filtración sin detectar pudre la
+ *    célula y la reparación cuesta más que el vehículo.
+ *  - Instalación de gas: revisión obligatoria cada cinco años en España.
+ *
+ * Y los neumáticos: en un vehículo que rueda poco y pesa mucho, mueren de
+ * edad y no de desgaste. Seis años es el límite habitual aunque tengan dibujo.
+ */
+const AUTOCARAVANA: Plantilla = {
+  aceite: { cadaKm: 25000, cadaMeses: 24 },
+  filtros: { cadaKm: 40000, cadaMeses: 24 },
+  neumaticos: { cadaKm: 60000, cadaMeses: 72 },
+  frenos: { cadaKm: 50000, cadaMeses: 60 },
+  distribucion: { cadaKm: 150000, cadaMeses: 120 },
+  // La de servicio se cansa antes que la del motor, y es la que te deja sin
+  // nevera a mitad de viaje.
+  bateria: { cadaMeses: 48 },
+  revision_general: { cadaKm: 20000, cadaMeses: 12 },
+  sellado_techo: { cadaMeses: 12 },
+  instalacion_gas: { cadaMeses: 60 },
+  otro: null,
+};
+
+const FURGONETA: Plantilla = {
+  aceite: { cadaKm: 20000, cadaMeses: 12 },
+  filtros: { cadaKm: 40000, cadaMeses: 24 },
+  neumaticos: { cadaKm: 50000, cadaMeses: 60 },
+  frenos: { cadaKm: 45000, cadaMeses: 48 },
+  distribucion: { cadaKm: 150000, cadaMeses: 120 },
+  bateria: { cadaMeses: 60 },
+  revision_general: { cadaKm: 25000, cadaMeses: 12 },
+  sellado_techo: null,
+  instalacion_gas: null,
+  otro: null,
+};
+
+/** Una moto gasta aceite cada 5.000-6.000 km y lleva cadena, no correa. */
+const MOTO: Plantilla = {
+  aceite: { cadaKm: 6000, cadaMeses: 12 },
+  filtros: { cadaKm: 12000, cadaMeses: 24 },
+  neumaticos: { cadaKm: 15000, cadaMeses: 60 },
+  frenos: { cadaKm: 20000, cadaMeses: 36 },
+  distribucion: { cadaKm: 20000, cadaMeses: 24 },
+  bateria: { cadaMeses: 36 },
+  revision_general: { cadaKm: 10000, cadaMeses: 12 },
+  sellado_techo: null,
+  instalacion_gas: null,
+  otro: null,
+};
+
+/**
+ * La categoría manda sobre el combustible, salvo cuando el vehículo es
+ * eléctrico: ahí desaparecen el aceite y la distribución sea lo que sea.
+ */
 export function plantillaReglas(
+  categoria: CategoriaVehiculo,
   combustible: TipoCombustible,
-): Record<TipoMantenimiento, PlantillaRegla | null> {
-  return combustible === 'electrico' ? REGLAS_ELECTRICO : REGLAS_COMBUSTION;
+): Plantilla {
+  if (combustible === 'electrico') return ELECTRICO;
+
+  switch (categoria) {
+    case 'autocaravana':
+      return AUTOCARAVANA;
+    case 'furgoneta':
+      return FURGONETA;
+    case 'moto':
+      return MOTO;
+    case 'turismo':
+    case 'otro':
+      return TURISMO;
+  }
 }
 
 /** Antelación con la que avisar de cada mantenimiento. */
@@ -132,6 +235,10 @@ export const ANTELACION_MANTENIMIENTO: Record<TipoMantenimiento, AntelacionAviso
   distribucion: { avisoKm: 5000, avisoDias: 90 },
   bateria: { avisoDias: 60 },
   revision_general: { avisoKm: 1500, avisoDias: 30 },
+  // Con margen para que quepa un fin de semana seco: el sellado no se puede
+  // revisar con el techo mojado.
+  sellado_techo: { avisoDias: 45 },
+  instalacion_gas: { avisoDias: 60 },
   otro: { avisoKm: 1000, avisoDias: 30 },
 };
 
@@ -141,7 +248,11 @@ export const ANTELACION_MANTENIMIENTO: Record<TipoMantenimiento, AntelacionAviso
 
 export const CATEGORIAS_GASTO: Record<CategoriaGasto, Etiqueta> = {
   seguro: { clave: 'seguro', nombre: 'Seguro', icono: '🛡️' },
-  impuesto_circulacion: { clave: 'impuesto_circulacion', nombre: 'Impuesto de circulación', icono: '🏛️' },
+  impuesto_circulacion: {
+    clave: 'impuesto_circulacion',
+    nombre: 'Impuesto de circulación',
+    icono: '🏛️',
+  },
   itv: { clave: 'itv', nombre: 'ITV', icono: '📋' },
   parking: { clave: 'parking', nombre: 'Parking', icono: '🅿️' },
   peajes: { clave: 'peajes', nombre: 'Peajes', icono: '🛣️' },
@@ -177,7 +288,11 @@ export const PERIODICIDADES: Record<Periodicidad, Etiqueta & { meses: number }> 
 export const TIPOS_DOCUMENTO: Record<TipoDocumento, Etiqueta> = {
   seguro: { clave: 'seguro', nombre: 'Seguro', icono: '🛡️' },
   itv: { clave: 'itv', nombre: 'ITV', icono: '🔎' },
-  impuesto_circulacion: { clave: 'impuesto_circulacion', nombre: 'Impuesto de circulación', icono: '🏛️' },
+  impuesto_circulacion: {
+    clave: 'impuesto_circulacion',
+    nombre: 'Impuesto de circulación',
+    icono: '🏛️',
+  },
   permiso_circulacion: { clave: 'permiso_circulacion', nombre: 'Permiso de circulación', icono: '📄' },
   ficha_tecnica: { clave: 'ficha_tecnica', nombre: 'Ficha técnica', icono: '📑' },
   otro: { clave: 'otro', nombre: 'Otro documento', icono: '🗂️' },

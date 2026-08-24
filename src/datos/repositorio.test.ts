@@ -22,6 +22,7 @@ afterEach(async () => {
 async function crearVehiculo(alias = 'Coche'): Promise<Vehiculo> {
   return repo.vehiculos.crear({
     alias,
+    categoria: 'turismo',
     marca: 'Marca',
     modelo: 'Modelo',
     matricula: '0000 AAA',
@@ -46,6 +47,7 @@ describe('metadatos de los registros', () => {
     const v = await repo.vehiculos.crear({
       id: 'id-externo',
       alias: 'Importado',
+      categoria: 'turismo',
       marca: 'M',
       modelo: 'M',
       matricula: '1111 BBB',

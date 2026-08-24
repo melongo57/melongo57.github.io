@@ -51,6 +51,25 @@ export class BaseDatosGaraje extends Dexie {
       adjuntos: 'id',
       ajustes: 'id',
     });
+
+    /*
+     * v2 — se añadió `categoria` al vehículo (turismo, autocaravana, moto…),
+     * que es lo que determina qué plantilla de recurrencias se aplica.
+     *
+     * Los índices no cambian, así que la versión existe solo para rellenar el
+     * campo en las bases ya creadas. Sin esto, un vehículo antiguo se queda con
+     * `categoria: undefined` y la interfaz intenta leer una etiqueta que no
+     * existe. Turismo es el valor seguro: es la plantilla que tenían todos
+     * antes de que hubiera categorías.
+     */
+    this.version(2).upgrade(async (tx) => {
+      await tx
+        .table<Vehiculo>('vehiculos')
+        .toCollection()
+        .modify((vehiculo) => {
+          vehiculo.categoria ??= 'turismo';
+        });
+    });
   }
 }
 
