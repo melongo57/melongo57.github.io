@@ -4,8 +4,9 @@ Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimient
 aplicación web instalable que funciona sin conexión y guarda los datos en tu propio
 dispositivo.
 
-> **Estado: fase 1 de 7 completada.** Están el esquema de datos, la capa de acceso, los datos
-> de ejemplo y el sistema de diseño. La interfaz real empieza en la fase 2.
+> **Estado: fase 2 de 7 completada.** Funcionan el panel principal, el alta y edición de
+> vehículos con foto, y el registro de kilómetros con validación. Los mantenimientos y sus
+> vencimientos llegan en la fase 3.
 
 ## Arranque
 
@@ -101,13 +102,21 @@ src/
 │   ├── formato.ts     Formato y lectura de números en español
 │   ├── catalogos.ts   Etiquetas y valores por defecto de cada enumerado
 │   └── ids.ts         UUID v4
+│   ├── odometro.ts    Estimación de kilometraje e interpolación
+│   └── validacion.ts  Reglas de entrada: errores frente a avisos
 ├── datos/       Persistencia.
-│   ├── db.ts               Esquema e índices de IndexedDB
+│   ├── db.ts               Esquema, índices y migraciones de IndexedDB
 │   ├── repositorio.ts      Interfaz: el único contrato que ve la interfaz
 │   ├── repositorioDexie.ts Implementación sobre Dexie
+│   ├── acciones.ts         Escrituras que abarcan varias tablas
+│   ├── imagenes.ts         Recompresión de fotos antes de guardarlas
 │   └── semilla.ts          Datos de ejemplo
 ├── ui/          React.
-└── estilos/     Tokens de diseño y reinicio CSS.
+│   ├── layout/        Armazón y navegación
+│   ├── paginas/       Panel, lista, ficha, formulario, ajustes
+│   ├── componentes/   Campos, botones, hoja modal
+│   └── ganchos/       Consultas reactivas sobre Dexie
+└── estilos/     Tokens de diseño, reinicio y piezas compartidas.
 ```
 
 La regla es que las dependencias apuntan hacia dentro: `ui` → `datos` → `dominio`. El
@@ -129,6 +138,40 @@ todas las conversiones van por componentes locales.
 odómetro. Un campo `kmActual` mutable se desincroniza en cuanto registras un repostaje con
 fecha atrasada. `Repositorio.puntosOdometro()` unifica las lecturas manuales con los
 kilómetros anotados en repostajes, mantenimientos y gastos, y devuelve una serie ordenada.
+
+### Estimación de kilometraje
+
+`estimarKm()` parte de la última lectura real y extrapola con el ritmo de uso del **último
+año**, no del histórico completo: quien hacía 30.000 km al año yendo a la oficina hace 6.000
+desde que teletrabaja, y la media de siempre seguiría prometiendo kilómetros que ya no
+recorre.
+
+La cifra viaja siempre acompañada de su procedencia. Si se ha extrapolado, la interfaz la
+marca con «≈» y dice de cuándo es la última lectura; si coincide con una lectura real, no.
+Un número inventado sin decir que es inventado acabaría copiado en el formulario del taller.
+
+Un vehículo vendido se congela en los kilómetros de la entrega: no tiene sentido estimar
+cuánto ha rodado desde que dejó de ser tuyo.
+
+### Errores frente a avisos
+
+`src/dominio/validacion.ts` distingue dos gravedades, y la diferencia es de producto, no
+técnica:
+
+- **Error**: no se puede guardar. Kilómetros negativos, fecha imposible, un vehículo vendido
+  sin fecha de venta.
+- **Aviso**: se puede guardar, pero hay que confirmarlo. El caso central es el odómetro que
+  retrocede. Casi siempre es un dedazo, pero a veces es real —cuadro sustituido, avería del
+  cuentakilómetros— y la app no puede impedirte registrar lo que de verdad marca tu coche.
+  Lo que no puede hacer es tragárselo en silencio.
+
+Los mensajes dan las cifras concretas («el registro del 21/08 ya marcaba 125.423 km, estás
+anotando 1000 km menos») en vez de un «revisa el valor» que obliga a ir a buscarlo.
+
+Dos decisiones de formulario que se derivan de esto: los campos no enseñan incidencias hasta
+que se tocan o se intenta guardar —un formulario recién abierto no está lleno de errores en
+rojo—, y **el botón de guardar nunca se deshabilita**. Un botón apagado no explica qué falta;
+es mejor dejar pulsar y contestar señalando los campos.
 
 ### Modelo de datos
 
@@ -182,10 +225,11 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-93 tests en la fase 1, centrados en lo que puede fallar en silencio: aritmética de céntimos,
-fechas cruzando cambios de hora y años bisiestos, lectura de números en formato español,
-integridad del repositorio (cascadas, adjuntos huérfanos, orden del odómetro), coherencia de
-los catálogos (ninguna regla puede quedarse sin poder vencer) y de los datos de ejemplo.
+142 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
+de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
+vehículos vendidos), validación de entradas, integridad del repositorio (cascadas, adjuntos
+huérfanos, orden del odómetro), coherencia de los catálogos y de los datos de ejemplo.
 
 ```bash
 npm test
@@ -194,7 +238,7 @@ npm test
 ## Plan de trabajo
 
 - [x] **Fase 1** — Estructura, stack, modelo de datos y datos de ejemplo
-- [ ] **Fase 2** — CRUD de vehículos, registro de kilómetros y panel principal
+- [x] **Fase 2** — CRUD de vehículos, registro de kilómetros y panel principal
 - [ ] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
 - [ ] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
 - [ ] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
