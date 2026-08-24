@@ -4,9 +4,9 @@ Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimient
 aplicación web instalable que funciona sin conexión y guarda los datos en tu propio
 dispositivo.
 
-> **Estado: fase 2 de 7 completada.** Funcionan el panel principal, el alta y edición de
-> vehículos con foto, y el registro de kilómetros con validación. Los mantenimientos y sus
-> vencimientos llegan en la fase 3.
+> **Estado: fase 3 de 7 completada.** Funcionan el panel con semáforo de vencimientos, el
+> alta y edición de vehículos, el registro de kilómetros y los mantenimientos con sus reglas
+> de recurrencia. Repostajes y gastos llegan en la fase 4.
 
 ## Arranque
 
@@ -103,6 +103,7 @@ src/
 │   ├── catalogos.ts   Etiquetas y valores por defecto de cada enumerado
 │   └── ids.ts         UUID v4
 │   ├── odometro.ts    Estimación de kilometraje e interpolación
+│   ├── vencimientos.ts Motor de vencimientos y semáforo
 │   └── validacion.ts  Reglas de entrada: errores frente a avisos
 ├── datos/       Persistencia.
 │   ├── db.ts               Esquema, índices y migraciones de IndexedDB
@@ -113,7 +114,7 @@ src/
 │   └── semilla.ts          Datos de ejemplo
 ├── ui/          React.
 │   ├── layout/        Armazón y navegación
-│   ├── paginas/       Panel, lista, ficha, formulario, ajustes
+│   ├── paginas/       Panel, lista, ficha, mantenimientos, reglas, ajustes
 │   ├── componentes/   Campos, botones, hoja modal
 │   └── ganchos/       Consultas reactivas sobre Dexie
 └── estilos/     Tokens de diseño, reinicio y piezas compartidas.
@@ -152,6 +153,38 @@ Un número inventado sin decir que es inventado acabaría copiado en el formular
 
 Un vehículo vendido se congela en los kilómetros de la entrega: no tiene sentido estimar
 cuánto ha rodado desde que dejó de ser tuyo.
+
+### Motor de vencimientos
+
+`src/dominio/vencimientos.ts` responde a una sola pregunta: qué le toca a este vehículo,
+cuándo, y cuánta prisa corre.
+
+**La idea central es la conversión de unidades.** Para poder ordenar «faltan 800 km» junto a
+«faltan 20 días» hay que traducir los kilómetros a días usando el ritmo de uso del vehículo.
+A 40 km/día, 800 km son 20 días y los dos avisos empatan; a 5 km/día son 160 días y el plazo
+manda con diferencia. Sin esa conversión, ordenar por urgencia sería comparar peras con
+manzanas — y es exactamente la diferencia entre un coche de diario y una autocaravana.
+
+De ahí salen tres consecuencias:
+
+- **«Lo que ocurra antes» es literalmente el mínimo de los dos.** Y basta con que *cualquiera*
+  de las dos dimensiones se haya pasado para marcar el vencimiento en rojo.
+- **Un vehículo parado no se acerca al límite por kilómetros.** Si el ritmo es cero, el
+  intervalo de km nunca urge por sí solo, por muchos años que pasen.
+- **Un vehículo vendido no genera ningún vencimiento.** Está congelado; recordarte su ITV
+  sería recordarte algo que ya no es asunto tuyo.
+
+**Lo que no se ha registrado nunca no se marca como vencido.** Si compraste el coche en 2019
+y no has anotado ningún cambio de aceite, las cuentas desde la compra dirían «cinco años de
+retraso», pero eso no es creíble: lo normal es que sí lo cambiaras y no lo anotaras. Lo que
+la app sabe de verdad es que le falta el dato, y eso es lo que dice: «Sin registrar», en
+ámbar. Media docena de falsos rojos a la vez ahogan el aviso que sí es real —la ITV
+caducada— y enseñan a ignorar el color.
+
+Por el mismo motivo, el orden va por **rangos** antes que por urgencia numérica: primero lo
+vencido, luego lo próximo con fecha, después lo que falta por registrar, y al final lo que
+está al día. Un seguro que vence en veinte días es una tarea con fecha; un filtro sin anotar
+es solo un hueco en el histórico.
 
 ### Errores frente a avisos
 
@@ -225,11 +258,13 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-142 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+184 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
-vehículos vendidos), validación de entradas, integridad del repositorio (cascadas, adjuntos
-huérfanos, orden del odómetro), coherencia de los catálogos y de los datos de ejemplo.
+vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
+reglas de una sola dimensión, vehículos parados, antelaciones propias frente a las de
+ajustes, recurrencias personalizadas que no deben mezclarse), validación de entradas,
+integridad del repositorio y coherencia de los catálogos y los datos de ejemplo.
 
 ```bash
 npm test
@@ -239,7 +274,7 @@ npm test
 
 - [x] **Fase 1** — Estructura, stack, modelo de datos y datos de ejemplo
 - [x] **Fase 2** — CRUD de vehículos, registro de kilómetros y panel principal
-- [ ] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
+- [x] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
 - [ ] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
 - [ ] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
 - [ ] **Fase 6** — Analíticas y gráficas
