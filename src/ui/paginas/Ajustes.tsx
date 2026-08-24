@@ -5,6 +5,7 @@ import type { Tema } from '@/dominio/tipos.ts';
 import { AvisoNotificaciones } from '../componentes/AvisoNotificaciones.tsx';
 import { Boton } from '../componentes/Boton.tsx';
 import { CopiaSeguridad } from '../componentes/CopiaSeguridad.tsx';
+import { EstadoDatos } from '../componentes/EstadoDatos.tsx';
 import { EstadoInstalacion } from '../componentes/EstadoInstalacion.tsx';
 import { CampoSelector } from '../componentes/Campo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
@@ -72,10 +73,31 @@ export function Ajustes(): React.JSX.Element {
           <strong className="numero">{vehiculos?.length ?? 0}</strong>{' '}
           {vehiculos?.length === 1 ? 'vehículo' : 'vehículos'}.
         </p>
-        <p className="ajustes__aviso">
-          <strong>Haz copias de seguridad.</strong> Si borras los datos de navegación, se van.
-          Descarga el JSON de vez en cuando y guárdalo donde guardes lo que te importa.
-        </p>
+        <EstadoDatos />
+
+        <details className="ajustes__detalle">
+          <summary>¿Qué borra mis datos?</summary>
+          <ul className="ajustes__lista">
+            <li>
+              <strong>Borrar la caché</strong> del navegador: <em>no</em> los toca. Solo
+              vuelve a descargar los archivos de la app.
+            </li>
+            <li>
+              <strong>Borrar «cookies y datos de sitios»</strong>: sí, se van todos.
+            </li>
+            <li>
+              <strong>«Eliminar datos»</strong> desde el candado de la barra de direcciones:
+              sí.
+            </li>
+            <li>
+              <strong>Desinstalar la app</strong> de la pantalla de inicio: según el
+              navegador, puede llevárselos.
+            </li>
+            <li>
+              <strong>Modo incógnito</strong>: se borran al cerrar la ventana.
+            </li>
+          </ul>
+        </details>
 
         <CopiaSeguridad />
 

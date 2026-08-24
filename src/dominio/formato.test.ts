@@ -102,6 +102,11 @@ describe('presentación', () => {
     expect(formatearBytes(2048)).toBe('2,0 kB');
     expect(formatearBytes(3 * 1024 * 1024)).toBe('3,0 MB');
   });
+
+  it('llega hasta gigas, que es como se mide la cuota del navegador', () => {
+    // «2861,9 MB» se lee bastante peor que «2,8 GB».
+    expect(formatearBytes(3_000_892_367)).toBe('2,8 GB');
+  });
 });
 
 describe('unirEnEspanol', () => {

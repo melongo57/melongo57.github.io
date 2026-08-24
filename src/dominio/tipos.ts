@@ -371,4 +371,11 @@ export interface Ajustes extends EntidadBase {
   antelacionDocumentoDias: Record<TipoDocumento, number>;
   notificacionesActivadas: boolean;
   ultimaRevisionAvisos?: InstanteISO;
+  /**
+   * Cuándo se descargó la última copia de seguridad.
+   *
+   * En una app cuyos datos solo viven en el navegador, saber que hace ocho
+   * meses que no haces copia es información de primer orden, no un detalle.
+   */
+  ultimaCopiaEn?: InstanteISO;
 }

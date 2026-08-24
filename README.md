@@ -65,8 +65,24 @@ Así que **IndexedDB es la única fuente de verdad**. Consecuencias, con lo buen
 - ✅ Los datos no salen del dispositivo.
 - ⚠️ **No hay sincronización entre móvil y ordenador.** Se pasan exportando e importando
   JSON (fase 7).
-- ⚠️ **Hay que hacer copias de seguridad.** Si borras los datos del navegador, se van. La
-  fase 7 incluirá un recordatorio periódico de exportación.
+- ⚠️ **Hay que hacer copias de seguridad.** Los datos viven en IndexedDB de este navegador.
+  Conviene tener claro qué los borra y qué no:
+
+  | Acción | ¿Se pierden? |
+  | --- | --- |
+  | Borrar la **caché** («imágenes y archivos almacenados en caché») | **No.** Solo se vuelven a descargar los archivos de la app. |
+  | Borrar **«cookies y datos de sitios»** | **Sí.** |
+  | «Eliminar datos» desde el candado de la barra de direcciones | **Sí.** |
+  | Desinstalar la PWA de la pantalla de inicio | Según el navegador, puede llevárselos. |
+  | Modo incógnito | Se borran al cerrar la ventana. |
+  | El navegador libera espacio por su cuenta | **Posible**, y sin avisar. Ver abajo. |
+
+  Ese último caso se mitiga con `navigator.storage.persist()`, que se pide al arrancar y
+  también desde Ajustes. Marca el almacenamiento como persistente y lo saca de la limpieza
+  automática. Chrome no lo concede por pedirlo: lo da cuando el sitio está instalado, tiene
+  permiso de notificaciones o acumula uso; la app lo explica en vez de dejar un botón que
+  aparentemente no hace nada. Ajustes muestra además cuánto ocupan los datos y cuándo fue la
+  última copia, y avisa a los 45 días sin una.
 
 Si algún día hace falta un backend, la capa de datos ya está preparada: toda la aplicación
 habla con la interfaz `Repositorio` (`src/datos/repositorio.ts`), nunca con Dexie

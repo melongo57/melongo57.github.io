@@ -11,6 +11,7 @@ import {
   type CopiaCompleta,
 } from '@/datos/exportacion.ts';
 import { repo } from '@/datos/repositorioDexie.ts';
+import { ahoraISO } from '@/dominio/fechas.ts';
 import { formatearBytes } from '@/dominio/formato.ts';
 import { Boton } from './Boton.tsx';
 import { HojaModal } from './HojaModal.tsx';
@@ -63,6 +64,8 @@ export function CopiaSeguridad(): React.JSX.Element {
       const copia = await exportarTodo(repo);
       const texto = JSON.stringify(copia, null, 2);
       descargar(nombreArchivoCopia(), texto, 'application/json');
+      // Se anota para poder avisar cuando la copia se quede vieja.
+      await repo.ajustes.guardar({ ultimaCopiaEn: ahoraISO() });
       setMensaje(
         `Copia descargada: ${copia.resumen.vehiculos ?? 0} vehículos y ` +
           `${copia.resumen.adjuntos ?? 0} adjuntos, ${formatearBytes(

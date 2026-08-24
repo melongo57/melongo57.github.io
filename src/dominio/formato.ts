@@ -54,11 +54,18 @@ export function formatearCostePorKm(euros: number): string {
   return `${DOS_DECIMALES.format(euros)} €/km`;
 }
 
-/** '1,2 MB' / '340 kB'. Para el gestor de adjuntos. */
+/**
+ * '340 kB' / '1,2 MB' / '2,8 GB'.
+ *
+ * Llega hasta gigas porque la cuota de almacenamiento del navegador se mide
+ * en ellos, y «2861,9 MB» se lee bastante peor que «2,8 GB».
+ */
 export function formatearBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${UN_DECIMAL.format(bytes / 1024)} kB`;
-  return `${UN_DECIMAL.format(bytes / (1024 * 1024))} MB`;
+  const kilo = 1024;
+  if (bytes < kilo) return `${bytes} B`;
+  if (bytes < kilo ** 2) return `${UN_DECIMAL.format(bytes / kilo)} kB`;
+  if (bytes < kilo ** 3) return `${UN_DECIMAL.format(bytes / kilo ** 2)} MB`;
+  return `${UN_DECIMAL.format(bytes / kilo ** 3)} GB`;
 }
 
 /** Une con comas y una 'y' final: 'aceite, filtro y bujías'. */
