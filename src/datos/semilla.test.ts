@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { diasEntre, hoyISO, mesesEntre } from '@/dominio/fechas.ts';
+import { kmAnuales } from '@/dominio/odometro.ts';
 import { nuevoId } from '@/dominio/ids.ts';
 import { BaseDatosGaraje } from './db.ts';
 import type { Repositorio } from './repositorio.ts';
@@ -46,19 +47,35 @@ describe('datos de ejemplo', () => {
 });
 
 describe('La Autocaravana — pocos kilómetros, mantenimiento por tiempo', () => {
-  it('rueda muy poco al año', async () => {
+  it('rueda muy poco al año, también según el ritmo reciente', async () => {
     const camper = await porAlias('La Autocaravana');
     const puntos = await repo.puntosOdometro(camper.id);
     const primero = puntos[0]!;
     const ultimo = puntos.at(-1)!;
 
     const anios = diasEntre(primero.fecha, ultimo.fecha) / 365;
-    const kmPorAnio = (ultimo.km - primero.km) / anios;
+    const mediaHistorica = (ultimo.km - primero.km) / anios;
+    expect(mediaHistorica).toBeGreaterThan(3000);
+    expect(mediaHistorica).toBeLessThan(8000);
 
-    // Entre 3.000 y 8.000 km al año: el patrón que hace que las reglas por
-    // kilómetros casi nunca disparen.
-    expect(kmPorAnio).toBeGreaterThan(3000);
-    expect(kmPorAnio).toBeLessThan(8000);
+    /*
+     * Y, sobre todo, el ritmo de la ventana reciente, que es el que enseña la
+     * app. Comprobar solo la media histórica dejaba pasar una semilla con los
+     * nueve repostajes apiñados en cuatro meses: la media salía bien y el
+     * panel anunciaba 19.000 km al año.
+     */
+    expect(kmAnuales(puntos)).toBeGreaterThan(2500);
+    expect(kmAnuales(puntos)).toBeLessThan(8000);
+  });
+
+  it('no deja ningún registro con el odómetro a cero después de la compra', async () => {
+    const camper = await porAlias('La Autocaravana');
+    const puntos = await repo.puntosOdometro(camper.id);
+    // Un mantenimiento anterior al primer repostaje se interpolaba hacia atrás
+    // y quedaba recortado a 0 km.
+    for (const punto of puntos) {
+      expect(punto.km).toBeGreaterThanOrEqual(camper.kmCompra ?? 0);
+    }
   });
 
   it('tiene las reglas propias de una autocaravana', async () => {

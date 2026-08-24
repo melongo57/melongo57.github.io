@@ -1,16 +1,15 @@
-import { plantillaReglas } from '@/dominio/catalogos.ts';
 import { aCentimos } from '@/dominio/dinero.ts';
-import { diasEntre, hoyISO, sumarDias, sumarMeses } from '@/dominio/fechas.ts';
+import { hoyISO, sumarDias, sumarMeses } from '@/dominio/fechas.ts';
+import { kmEnFecha, type HitoOdometro } from '@/dominio/odometro.ts';
 import type {
   Centimos,
   FechaISO,
   Id,
   Nuevo,
   Repostaje,
-  TipoMantenimiento,
   UnidadEnergia,
-  Vehiculo,
 } from '@/dominio/tipos.ts';
+import { crearReglasPorDefecto } from './acciones.ts';
 import type { Repositorio } from './repositorio.ts';
 
 /**
@@ -80,6 +79,13 @@ interface PlanRepostajes {
   precioMin: number;
   precioMax: number;
   estaciones: readonly string[];
+  /**
+   * Días entre repostajes. Es lo que separa un coche de diario de una
+   * autocaravana: la misma cantidad de repostajes repartida en meses o en
+   * años cambia por completo el ritmo de uso que calcula el estimador.
+   */
+  diasEntreMin: number;
+  diasEntreMax: number;
   semilla: number;
 }
 
@@ -126,73 +132,30 @@ function generarRepostajes(plan: PlanRepostajes): Nuevo<Repostaje>[] {
     });
 
     km -= avance;
-    fecha = sumarDias(fecha, -Math.round(entre(azar, 9, 18)));
+    fecha = sumarDias(fecha, -Math.round(entre(azar, plan.diasEntreMin, plan.diasEntreMax)));
   }
 
   return serie.reverse();
 }
 
-/** Punto (fecha, km) mínimo con el que trabaja el interpolador. */
-interface Hito {
-  fecha: FechaISO;
-  km: number;
-}
-
 /**
- * Odómetro estimado en una fecha, interpolando linealmente sobre la serie.
- * Fuera del rango extrapola con el ritmo medio de la serie, sin bajar nunca de
- * cero. Es la misma idea que usará el estimador de la fase 2, en versión
- * mínima: aquí solo hace falta que los datos de ejemplo sean coherentes.
+ * Serie para interpolar, anclada en la compra del vehículo.
+ *
+ * Sin el ancla, cualquier fecha anterior al primer repostaje se extrapolaba
+ * hacia atrás con el ritmo reciente y acababa recortada a cero: un
+ * mantenimiento de hace cuatro años quedaba registrado con 0 km.
  */
-function kmEnFecha(serie: readonly Hito[], fecha: FechaISO): number {
-  const primero = serie[0];
-  const ultimo = serie.at(-1);
-  if (!primero || !ultimo) return 0;
-
-  const dias = diasEntre(primero.fecha, ultimo.fecha);
-  const ritmo = dias > 0 ? (ultimo.km - primero.km) / dias : 0;
-
-  if (fecha <= primero.fecha) {
-    return Math.max(0, Math.round(primero.km - ritmo * diasEntre(fecha, primero.fecha)));
-  }
-  if (fecha >= ultimo.fecha) {
-    return Math.round(ultimo.km + ritmo * diasEntre(ultimo.fecha, fecha));
-  }
-
-  for (let i = 1; i < serie.length; i += 1) {
-    const anterior = serie[i - 1]!;
-    const siguiente = serie[i]!;
-    if (fecha > siguiente.fecha) continue;
-
-    const tramo = diasEntre(anterior.fecha, siguiente.fecha);
-    if (tramo === 0) return siguiente.km;
-    const t = diasEntre(anterior.fecha, fecha) / tramo;
-    return Math.round(anterior.km + (siguiente.km - anterior.km) * t);
-  }
-
-  return ultimo.km;
+function hitos(
+  repostajes: readonly Nuevo<Repostaje>[],
+  compra?: HitoOdometro,
+): HitoOdometro[] {
+  const serie = repostajes.map((r) => ({ fecha: r.fecha, km: r.km ?? 0 }));
+  return compra ? [compra, ...serie] : serie;
 }
 
-function hitos(repostajes: readonly Nuevo<Repostaje>[]): Hito[] {
-  return repostajes.map((r) => ({ fecha: r.fecha, km: r.km ?? 0 }));
-}
-
-// ---------------------------------------------------------------------------
-// Reglas de mantenimiento a partir de la plantilla del combustible
-// ---------------------------------------------------------------------------
-
-async function crearReglas(repo: Repositorio, vehiculo: Vehiculo): Promise<void> {
-  const plantilla = plantillaReglas(vehiculo.categoria, vehiculo.combustible);
-  for (const [tipo, regla] of Object.entries(plantilla)) {
-    if (!regla) continue;
-    await repo.reglas.crear({
-      vehiculoId: vehiculo.id,
-      tipo: tipo as TipoMantenimiento,
-      ...(regla.cadaKm !== undefined ? { cadaKm: regla.cadaKm } : {}),
-      ...(regla.cadaMeses !== undefined ? { cadaMeses: regla.cadaMeses } : {}),
-      activa: true,
-    });
-  }
+/** El interpolador del dominio devuelve null sin datos; aquí siempre los hay. */
+function enFecha(serie: readonly HitoOdometro[], fecha: FechaISO): number {
+  return kmEnFecha(serie, fecha) ?? 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +187,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 0,
   });
-  await crearReglas(repo, golf);
+  await crearReglasPorDefecto(golf, repo);
 
   await repo.lecturas.crear({
     vehiculoId: golf.id,
@@ -247,12 +210,15 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     precioMin: 1.412,
     precioMax: 1.689,
     estaciones: ['Repsol A-6', 'Cepsa Villalba', 'BP Las Rozas', 'Carrefour Majadahonda'],
+    // Un depósito cada dos o tres semanas: uso diario de trayecto corto.
+    diasEntreMin: 14,
+    diasEntreMax: 24,
     semilla: 20260824,
   });
   for (const r of repostajesGolf) await repo.repostajes.crear(r);
 
-  const kmGolf = hitos(repostajesGolf);
-  const enFechaGolf = (fecha: FechaISO): number => kmEnFecha(kmGolf, fecha);
+  const kmGolf = hitos(repostajesGolf, { fecha: '2019-04-12', km: 18400 });
+  const enFechaGolf = (fecha: FechaISO): number => enFecha(kmGolf, fecha);
 
   // Mantenimientos pasados. El aceite es el que vence pronto: la regla es
   // cada 15.000 km o 12 meses, y de esto hace once.
@@ -428,7 +394,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 1,
   });
-  await crearReglas(repo, zoe);
+  await crearReglasPorDefecto(zoe, repo);
 
   await repo.lecturas.crear({
     vehiculoId: zoe.id,
@@ -452,18 +418,20 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     precioMin: 0.092,
     precioMax: 0.59,
     estaciones: ['Casa (valle)', 'Iberdrola Plaza Norte', 'Zunder A-1', 'Casa (valle)'],
+    diasEntreMin: 10,
+    diasEntreMax: 20,
     semilla: 77712,
   });
   for (const c of cargasZoe) await repo.repostajes.crear(c);
 
-  const kmZoe = hitos(cargasZoe);
+  const kmZoe = hitos(cargasZoe, { fecha: '2022-09-30', km: 12 });
 
   const revisionZoe = sumarMeses(hoy, -9);
   await repo.mantenimientos.crear({
     vehiculoId: zoe.id,
     tipo: 'revision_general',
     fecha: revisionZoe,
-    km: kmEnFecha(kmZoe, revisionZoe),
+    km: enFecha(kmZoe, revisionZoe),
     taller: 'Renault Alcobendas',
     costeCentimos: euros(148),
     piezas: ['Filtro de habitáculo', 'Revisión de refrigeración de batería'],
@@ -475,7 +443,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     vehiculoId: zoe.id,
     tipo: 'neumaticos',
     fecha: neumaticosZoe,
-    km: kmEnFecha(kmZoe, neumaticosZoe),
+    km: enFecha(kmZoe, neumaticosZoe),
     taller: 'Confortauto',
     costeCentimos: euros(386),
     piezas: ['4× Michelin e·Primacy 195/55 R16'],
@@ -554,7 +522,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 2,
   });
-  await crearReglas(repo, camper);
+  await crearReglasPorDefecto(camper, repo);
 
   await repo.lecturas.crear({
     vehiculoId: camper.id,
@@ -582,11 +550,18 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     precioMin: 1.455,
     precioMax: 1.712,
     estaciones: ['Repsol A-2', 'Cepsa Zaragoza', 'Área de servicio Somport', 'BP Jaca'],
+    /*
+     * Meses entre repostaje y repostaje, no semanas. Es lo que hace que sus
+     * mantenimientos venzan por tiempo: a este ritmo, una regla de «cada
+     * 15.000 km» tardaría casi cuatro años en dispararse.
+     */
+    diasEntreMin: 45,
+    diasEntreMax: 95,
     semilla: 51907,
   });
   for (const r of repostajesCamper) await repo.repostajes.crear(r);
 
-  const kmCamper = hitos(repostajesCamper);
+  const kmCamper = hitos(repostajesCamper, { fecha: '2018-05-19', km: 8600 });
 
   // El sellado del techo es anual. Este se hizo hace catorce meses: vencido.
   const selladoCamper = sumarMeses(hoy, -14);
@@ -594,7 +569,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     vehiculoId: camper.id,
     tipo: 'sellado_techo',
     fecha: selladoCamper,
-    km: kmEnFecha(kmCamper, selladoCamper),
+    km: enFecha(kmCamper, selladoCamper),
     taller: 'Caravanas Pirineo',
     costeCentimos: euros(215),
     piezas: ['Sikaflex 512', 'Revisión de claraboyas y juntas'],
@@ -607,7 +582,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     vehiculoId: camper.id,
     tipo: 'instalacion_gas',
     fecha: gasCamper,
-    km: kmEnFecha(kmCamper, gasCamper),
+    km: enFecha(kmCamper, gasCamper),
     taller: 'Caravanas Pirineo',
     costeCentimos: euros(92),
     piezas: ['Certificado de revisión de instalación de gas'],
@@ -619,7 +594,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     vehiculoId: camper.id,
     tipo: 'aceite',
     fecha: aceiteCamper,
-    km: kmEnFecha(kmCamper, aceiteCamper),
+    km: enFecha(kmCamper, aceiteCamper),
     taller: 'Fiat Professional Huesca',
     costeCentimos: euros(178.4),
     piezas: ['Aceite 5W30 7 l', 'Filtro de aceite', 'Filtro de combustible'],
@@ -710,7 +685,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     notas: 'Vendido a un particular por Wallapop. Aguantó hasta el final.',
     orden: 3,
   });
-  await crearReglas(repo, ibiza);
+  await crearReglasPorDefecto(ibiza, repo);
 
   await repo.lecturas.crear({
     vehiculoId: ibiza.id,
@@ -732,18 +707,20 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     precioMin: 1.519,
     precioMax: 1.812,
     estaciones: ['Shell Getafe', 'Repsol M-45'],
+    diasEntreMin: 12,
+    diasEntreMax: 22,
     semilla: 4410,
   });
   for (const r of repostajesIbiza) await repo.repostajes.crear(r);
 
-  const kmIbiza = hitos(repostajesIbiza);
+  const kmIbiza = hitos(repostajesIbiza, { fecha: '2013-06-02', km: 62000 });
 
   const aceiteIbiza = sumarMeses(fechaVenta, -4);
   await repo.mantenimientos.crear({
     vehiculoId: ibiza.id,
     tipo: 'aceite',
     fecha: aceiteIbiza,
-    km: kmEnFecha(kmIbiza, aceiteIbiza),
+    km: enFecha(kmIbiza, aceiteIbiza),
     taller: 'Taller del barrio',
     costeCentimos: euros(72),
     piezas: ['Aceite 10W40 4 l', 'Filtro de aceite'],
@@ -755,7 +732,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     vehiculoId: ibiza.id,
     tipo: 'bateria',
     fecha: bateriaIbiza,
-    km: kmEnFecha(kmIbiza, bateriaIbiza),
+    km: enFecha(kmIbiza, bateriaIbiza),
     taller: 'Norauto Getafe',
     costeCentimos: euros(94.9),
     piezas: ['Batería 60 Ah'],
