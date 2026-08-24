@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { hoyISO } from '@/dominio/fechas.ts';
+import { diasEntre, hoyISO, mesesEntre } from '@/dominio/fechas.ts';
 import { nuevoId } from '@/dominio/ids.ts';
 import { BaseDatosGaraje } from './db.ts';
 import type { Repositorio } from './repositorio.ts';
@@ -28,15 +28,58 @@ async function porAlias(alias: string) {
 }
 
 describe('datos de ejemplo', () => {
-  it('crea los tres vehículos', async () => {
+  it('crea los cuatro vehículos', async () => {
     const vehiculos = await repo.vehiculos.listar();
-    expect(vehiculos.map((v) => v.alias).sort()).toEqual(['El Golf', 'El Ibiza', 'La Zoe']);
+    expect(vehiculos.map((v) => v.alias).sort()).toEqual([
+      'El Golf',
+      'El Ibiza',
+      'La Autocaravana',
+      'La Zoe',
+    ]);
   });
 
   it('solo siembra si la base está vacía', async () => {
     expect(await estaVacia(repo)).toBe(false);
     expect(await sembrarSiHaceFalta(repo)).toBe(false);
-    expect(await repo.vehiculos.contar()).toBe(3);
+    expect(await repo.vehiculos.contar()).toBe(4);
+  });
+});
+
+describe('La Autocaravana — pocos kilómetros, mantenimiento por tiempo', () => {
+  it('rueda muy poco al año', async () => {
+    const camper = await porAlias('La Autocaravana');
+    const puntos = await repo.puntosOdometro(camper.id);
+    const primero = puntos[0]!;
+    const ultimo = puntos.at(-1)!;
+
+    const anios = diasEntre(primero.fecha, ultimo.fecha) / 365;
+    const kmPorAnio = (ultimo.km - primero.km) / anios;
+
+    // Entre 3.000 y 8.000 km al año: el patrón que hace que las reglas por
+    // kilómetros casi nunca disparen.
+    expect(kmPorAnio).toBeGreaterThan(3000);
+    expect(kmPorAnio).toBeLessThan(8000);
+  });
+
+  it('tiene las reglas propias de una autocaravana', async () => {
+    const camper = await porAlias('La Autocaravana');
+    const reglas = await repo.reglas.listarPorVehiculo(camper.id);
+    const tipos = reglas.map((r) => r.tipo);
+
+    expect(tipos).toContain('sellado_techo');
+    expect(tipos).toContain('instalacion_gas');
+    expect(reglas.find((r) => r.tipo === 'sellado_techo')?.cadaMeses).toBe(12);
+  });
+
+  it('tiene el sellado del techo caducado', async () => {
+    const camper = await porAlias('La Autocaravana');
+    const mantenimientos = await repo.mantenimientos.listarPorVehiculo(camper.id);
+    const sellado = mantenimientos.find((m) => m.tipo === 'sellado_techo');
+
+    expect(sellado).toBeDefined();
+    // La regla es anual y del último hace más de doce meses: debe salir en
+    // rojo en el panel. Es el aviso que más caro sale ignorar.
+    expect(mesesEntre(sellado!.fecha, hoyISO())).toBeGreaterThan(12);
   });
 });
 

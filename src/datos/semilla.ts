@@ -25,6 +25,9 @@ import type { Repositorio } from './repositorio.ts';
  *                sostenida de consumo al final (para que el detector de
  *                anomalías de la fase 6 tenga algo real que encontrar).
  *  - La Zoe    → eléctrico: carga en kWh, sin aceite ni distribución.
+ *  - La Autocaravana → pocos kilómetros al año, así que sus mantenimientos
+ *                vencen por tiempo y no por uso. Tiene el sellado del techo
+ *                caducado, que es el aviso que más caro sale ignorar.
  *  - El Ibiza  → vendido: histórico congelado, sin avisos, pero cuenta en las
  *                analíticas de años anteriores.
  *
@@ -179,7 +182,7 @@ function hitos(repostajes: readonly Nuevo<Repostaje>[]): Hito[] {
 // ---------------------------------------------------------------------------
 
 async function crearReglas(repo: Repositorio, vehiculo: Vehiculo): Promise<void> {
-  const plantilla = plantillaReglas(vehiculo.combustible);
+  const plantilla = plantillaReglas(vehiculo.categoria, vehiculo.combustible);
   for (const [tipo, regla] of Object.entries(plantilla)) {
     if (!regla) continue;
     await repo.reglas.crear({
@@ -206,6 +209,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
   // =========================================================================
   const golf = await repo.vehiculos.crear({
     alias: 'El Golf',
+    categoria: 'turismo',
     marca: 'Volkswagen',
     modelo: 'Golf',
     version: '2.0 TDI 150 CV Advance',
@@ -410,6 +414,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
   // =========================================================================
   const zoe = await repo.vehiculos.crear({
     alias: 'La Zoe',
+    categoria: 'turismo',
     marca: 'Renault',
     modelo: 'Zoe',
     version: 'R135 Intens 52 kWh',
@@ -530,11 +535,165 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
   });
 
   // =========================================================================
-  // 3. El Ibiza — vendido: histórico congelado, sin avisos
+  // 3. La Autocaravana — pocos kilómetros, mantenimientos por tiempo
+  // =========================================================================
+  const camper = await repo.vehiculos.crear({
+    alias: 'La Autocaravana',
+    categoria: 'autocaravana',
+    marca: 'Benimar',
+    modelo: 'Tessoro 481',
+    version: 'Fiat Ducato 2.3 MultiJet 140 CV',
+    matricula: '9134 JVT',
+    anio: 2017,
+    combustible: 'diesel',
+    fechaCompra: '2018-05-19',
+    kmCompra: 8600,
+    precioCompraCentimos: euros(52900),
+    bastidor: 'ZFA25000002B98765',
+    notas: 'Perfilada de 6,99 m. MMA 3.500 kg. Camas gemelas.',
+    estado: 'activo',
+    orden: 2,
+  });
+  await crearReglas(repo, camper);
+
+  await repo.lecturas.crear({
+    vehiculoId: camper.id,
+    fecha: '2018-05-19',
+    km: 8600,
+    origen: 'alta_vehiculo',
+    notas: 'Kilómetros de entrega.',
+  });
+
+  /*
+   * Solo 9 repostajes en dos años y medio: unos 5.000 km al año, casi todos en
+   * verano. Es justo el patrón que hace inútiles las reglas por kilómetros y
+   * obliga a que manden las de tiempo.
+   */
+  const repostajesCamper = generarRepostajes({
+    vehiculoId: camper.id,
+    unidad: 'l',
+    cantidad: 9,
+    fechaFin: sumarMeses(hoy, -1),
+    kmFin: 47800,
+    // Depósito de 90 l y 10,5 l/100 km: se reposta cada 700-800 km.
+    kmPorTramo: 760,
+    consumoBase: 10.6,
+    derivaConsumo: 0,
+    precioMin: 1.455,
+    precioMax: 1.712,
+    estaciones: ['Repsol A-2', 'Cepsa Zaragoza', 'Área de servicio Somport', 'BP Jaca'],
+    semilla: 51907,
+  });
+  for (const r of repostajesCamper) await repo.repostajes.crear(r);
+
+  const kmCamper = hitos(repostajesCamper);
+
+  // El sellado del techo es anual. Este se hizo hace catorce meses: vencido.
+  const selladoCamper = sumarMeses(hoy, -14);
+  await repo.mantenimientos.crear({
+    vehiculoId: camper.id,
+    tipo: 'sellado_techo',
+    fecha: selladoCamper,
+    km: kmEnFecha(kmCamper, selladoCamper),
+    taller: 'Caravanas Pirineo',
+    costeCentimos: euros(215),
+    piezas: ['Sikaflex 512', 'Revisión de claraboyas y juntas'],
+    notas: 'Repasadas las juntas de las dos claraboyas. Sin humedad detectada.',
+    adjuntoIds: [],
+  });
+
+  const gasCamper = sumarMeses(hoy, -50);
+  await repo.mantenimientos.crear({
+    vehiculoId: camper.id,
+    tipo: 'instalacion_gas',
+    fecha: gasCamper,
+    km: kmEnFecha(kmCamper, gasCamper),
+    taller: 'Caravanas Pirineo',
+    costeCentimos: euros(92),
+    piezas: ['Certificado de revisión de instalación de gas'],
+    adjuntoIds: [],
+  });
+
+  const aceiteCamper = sumarMeses(hoy, -16);
+  await repo.mantenimientos.crear({
+    vehiculoId: camper.id,
+    tipo: 'aceite',
+    fecha: aceiteCamper,
+    km: kmEnFecha(kmCamper, aceiteCamper),
+    taller: 'Fiat Professional Huesca',
+    costeCentimos: euros(178.4),
+    piezas: ['Aceite 5W30 7 l', 'Filtro de aceite', 'Filtro de combustible'],
+    adjuntoIds: [],
+  });
+
+  await repo.documentos.crear({
+    vehiculoId: camper.id,
+    tipo: 'itv',
+    fechaEmision: sumarMeses(hoy, -12),
+    fechaVencimiento: sumarMeses(hoy, 12),
+    estacion: 'ITV Huesca',
+    resultado: 'favorable',
+    adjuntoIds: [],
+  });
+  await repo.documentos.crear({
+    vehiculoId: camper.id,
+    tipo: 'seguro',
+    compania: 'Caser',
+    poliza: 'CS-2019004',
+    cobertura: 'todo_riesgo_franquicia',
+    franquiciaCentimos: euros(600),
+    primaCentimos: euros(741.9),
+    fechaEmision: sumarMeses(hoy, -7),
+    fechaVencimiento: sumarMeses(hoy, 5),
+    adjuntoIds: [],
+  });
+
+  await repo.gastos.crear({
+    vehiculoId: camper.id,
+    categoria: 'seguro',
+    descripcion: 'Prima anual Caser',
+    importeCentimos: euros(741.9),
+    fecha: sumarMeses(hoy, -7),
+    recurrente: true,
+    periodicidad: 'anual',
+    adjuntoIds: [],
+  });
+  await repo.gastos.crear({
+    vehiculoId: camper.id,
+    categoria: 'parking',
+    descripcion: 'Plaza de aparcamiento para autocaravana',
+    importeCentimos: euros(95),
+    fecha: sumarDias(hoy, -8),
+    recurrente: true,
+    periodicidad: 'mensual',
+    adjuntoIds: [],
+  });
+  await repo.gastos.crear({
+    vehiculoId: camper.id,
+    categoria: 'impuesto_circulacion',
+    importeCentimos: euros(148.2),
+    fecha: sumarMeses(hoy, -6),
+    recurrente: true,
+    periodicidad: 'anual',
+    adjuntoIds: [],
+  });
+  await repo.gastos.crear({
+    vehiculoId: camper.id,
+    categoria: 'peajes',
+    descripcion: 'Viaje a los Pirineos',
+    importeCentimos: euros(64.3),
+    fecha: sumarMeses(hoy, -1),
+    recurrente: false,
+    adjuntoIds: [],
+  });
+
+  // =========================================================================
+  // 4. El Ibiza — vendido: histórico congelado, sin avisos
   // =========================================================================
   const fechaVenta = sumarMeses(hoy, -20);
   const ibiza = await repo.vehiculos.crear({
     alias: 'El Ibiza',
+    categoria: 'turismo',
     marca: 'SEAT',
     modelo: 'Ibiza',
     version: '1.4 Reference',
@@ -549,7 +708,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     kmVenta: 198400,
     precioVentaCentimos: euros(1900),
     notas: 'Vendido a un particular por Wallapop. Aguantó hasta el final.',
-    orden: 2,
+    orden: 3,
   });
   await crearReglas(repo, ibiza);
 
