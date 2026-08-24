@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5"
+    />
+    <title>Mi Garaje</title>
+    <meta name="description" content="Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimientos." />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icono-180.png" />
+
+    <meta name="application-name" content="Mi Garaje" />
+    <meta name="apple-mobile-web-app-title" content="Mi Garaje" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!--
+      El color de la barra del sistema sigue al tema. Se declaran los dos y el
+      navegador elige; `src/ui/tema.ts` lo reescribe si el usuario fuerza uno.
+    -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f5f2" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#131211" />
+
+    <!--
+      Pinta el fondo correcto antes del primer frame de React. Sin esto, abrir
+      la app instalada en modo oscuro produce un destello blanco.
+    -->
+    <script>
+      (function () {
+        try {
+          var guardado = localStorage.getItem('mi-garaje:tema');
+          var oscuro =
+            guardado === 'oscuro' ||
+            ((!guardado || guardado === 'sistema') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (oscuro) document.documentElement.setAttribute('data-tema', 'oscuro');
+        } catch (e) {
+          /* localStorage bloqueado: se usa el tema claro. */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="raiz"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
