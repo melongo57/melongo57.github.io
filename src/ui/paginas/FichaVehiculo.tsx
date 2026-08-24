@@ -243,7 +243,12 @@ export function FichaVehiculo(): React.JSX.Element {
       (analisis.costeReciente.centimosPorKm !== null ||
         analisis.consumos.some((c) => c.consumoMedio !== null)) ? (
         <section className="ficha__analisis">
-          <h2>Lo que cuesta</h2>
+          <div className="ficha__vencimientos-cabecera">
+            <h2>Lo que cuesta</h2>
+            <EnlaceBoton a={`/vehiculos/${v.id}/analisis`} variante="sutil">
+              Ver análisis
+            </EnlaceBoton>
+          </div>
 
           <div className="ficha__analisis-rejilla">
             {analisis.consumos

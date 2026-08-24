@@ -1,6 +1,7 @@
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom';
 import { Disposicion } from './layout/Disposicion.tsx';
 import { Agenda } from './paginas/Agenda.tsx';
+import { Analisis } from './paginas/Analisis.tsx';
 import { Ajustes } from './paginas/Ajustes.tsx';
 import { Documentos } from './paginas/Documentos.tsx';
 import { FichaVehiculo } from './paginas/FichaVehiculo.tsx';
@@ -33,6 +34,7 @@ export function App(): React.JSX.Element {
           <Route path="/vehiculos/:id/repostajes" element={<Repostajes />} />
           <Route path="/vehiculos/:id/gastos" element={<Gastos />} />
           <Route path="/vehiculos/:id/documentos" element={<Documentos />} />
+          <Route path="/vehiculos/:id/analisis" element={<Analisis />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/ajustes" element={<Ajustes />} />
           <Route path="*" element={<Navigate to="/" replace />} />

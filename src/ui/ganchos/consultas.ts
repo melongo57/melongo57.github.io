@@ -22,6 +22,7 @@ import {
   type GastoPorCategoria,
 } from '@/dominio/costes.ts';
 import { unidadesDe } from '@/dominio/catalogos.ts';
+import { ordenarComparativa, type FilaComparativa } from '@/dominio/anomalias.ts';
 import {
   eventosDeGastos,
   eventosDeVencimientos,
@@ -353,5 +354,50 @@ export function useTodosLosVencimientos(): Vencimiento[] | undefined {
       activos.map(async (v) => (await cargarParaVencimientos(v)).vencimientos),
     );
     return listas.flat().sort((a, b) => a.urgencia - b.urgencia);
+  }, []);
+}
+
+/**
+ * Comparativa entre los vehículos activos, del más barato por kilómetro al
+ * más caro. Solo tiene sentido con más de uno.
+ */
+export function useComparativa(): FilaComparativa[] | undefined {
+  return useLiveQuery(async () => {
+    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const activos = vehiculos.filter((v) => v.estado === 'activo');
+
+    const filas = await Promise.all(
+      activos.map(async (vehiculo): Promise<FilaComparativa> => {
+        const [puntos, repostajes, mantenimientos, gastos] = await Promise.all([
+          repo.puntosOdometro(vehiculo.id),
+          repo.repostajes.listarPorVehiculo(vehiculo.id),
+          repo.mantenimientos.listarPorVehiculo(vehiculo.id),
+          repo.gastos.listarPorVehiculo(vehiculo.id),
+        ]);
+
+        const unidad = unidadesDe(vehiculo.combustible)[0] ?? 'l';
+        const consumo = resumirConsumo(repostajes, unidad);
+        const reciente = calcularCostePorKm({
+          vehiculo,
+          repostajes,
+          mantenimientos,
+          gastos,
+          puntos,
+          periodo: ultimosMeses(12),
+        });
+
+        return {
+          vehiculoId: vehiculo.id,
+          alias: vehiculo.alias,
+          unidad,
+          consumoMedio: consumo.consumoMedio,
+          centimosPorKm: reciente.centimosPorKm,
+          kmAlAnio: kmAnuales(puntos),
+          gastoAnualCentimos: reciente.registros > 0 ? reciente.totalCentimos : null,
+        };
+      }),
+    );
+
+    return ordenarComparativa(filas);
   }, []);
 }

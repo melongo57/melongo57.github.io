@@ -1,0 +1,172 @@
+.analisis {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.analisis__cabecera h1 {
+  font-size: var(--t-xl);
+}
+
+.analisis__sub {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.bloque__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.analisis__cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--e-4);
+}
+
+.analisis__pie {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.analisis__sin-datos {
+  padding: var(--e-4);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--c-borde-fuerte);
+  color: var(--c-texto-tenue);
+  font-size: var(--t-sm);
+}
+
+/* --------------------------------------------------------------------------
+ * Anomalías
+ * ------------------------------------------------------------------------ */
+
+.analisis__anomalias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.anomalia {
+  display: flex;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border-radius: var(--r-lg);
+  border: 1px solid;
+}
+
+.anomalia.es-alerta {
+  background: var(--c-alerta-fondo);
+  border-color: var(--c-alerta-borde);
+  color: var(--c-alerta);
+}
+
+.anomalia.es-aviso {
+  background: var(--c-aviso-fondo);
+  border-color: var(--c-aviso-borde);
+  color: var(--c-aviso);
+}
+
+.anomalia__icono {
+  flex-shrink: 0;
+  font-size: var(--t-lg);
+  line-height: 1.2;
+}
+
+.anomalia__titulo {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.anomalia__texto {
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+
+.anomalia__desde {
+  margin-top: var(--e-2);
+  font-size: var(--t-xs);
+  opacity: 0.8;
+}
+
+/* --------------------------------------------------------------------------
+ * Pestañas de unidad (híbrido enchufable)
+ * ------------------------------------------------------------------------ */
+
+.analisis__pestanas {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--c-superficie-2);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-full);
+}
+
+.analisis__pestana {
+  min-height: 32px;
+  padding: 0 var(--e-3);
+  border-radius: var(--r-full);
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--c-texto-suave);
+}
+
+.analisis__pestana.es-activa {
+  background: var(--c-superficie);
+  color: var(--c-acento);
+}
+
+/* --------------------------------------------------------------------------
+ * Comparativa
+ * ------------------------------------------------------------------------ */
+
+/* La tabla desborda en móvil antes que la página: el scroll va aquí dentro. */
+.tabla-envoltorio {
+  overflow-x: auto;
+  margin-inline: calc(var(--e-4) * -1);
+  padding-inline: var(--e-4);
+}
+
+.comparativa {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-sm);
+  white-space: nowrap;
+}
+
+.comparativa th {
+  padding: var(--e-2) var(--e-3);
+  text-align: left;
+  font-size: var(--t-xs);
+  font-weight: 680;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-texto-tenue);
+  border-bottom: 1px solid var(--c-borde);
+}
+
+.comparativa td {
+  padding: var(--e-3);
+  border-bottom: 1px solid var(--c-borde);
+}
+
+.comparativa tr:last-child td {
+  border-bottom: none;
+}
+
+.comparativa a {
+  font-weight: 620;
+  color: var(--c-acento);
+}
+
+/* La fila del vehículo que estás mirando, marcada para no perderla. */
+.comparativa tr.es-actual {
+  background: var(--c-acento-suave);
+}
+
+.comparativa tr.es-actual a {
+  color: var(--c-acento);
+}

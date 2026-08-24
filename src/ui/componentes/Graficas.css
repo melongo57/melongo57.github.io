@@ -1,0 +1,103 @@
+/* --------------------------------------------------------------------------
+ * Tooltip común a todas las gráficas
+ * ------------------------------------------------------------------------ */
+
+.grafica-tooltip {
+  padding: var(--e-2) var(--e-3);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-borde-fuerte);
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-2);
+  font-size: var(--t-sm);
+}
+
+.grafica-tooltip__titulo {
+  font-weight: 680;
+  margin-bottom: var(--e-1);
+}
+
+.grafica-tooltip__titulo::first-letter {
+  text-transform: uppercase;
+}
+
+.grafica-tooltip__fila {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  color: var(--c-texto-suave);
+}
+
+.grafica-tooltip__fila strong {
+  margin-left: auto;
+  color: var(--c-texto);
+}
+
+.grafica-tooltip__punto {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Reparto por categoría
+ * ------------------------------------------------------------------------ */
+
+.barras-categoria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.barra-categoria {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'nombre importe pct'
+    'pista pista pista';
+  align-items: center;
+  gap: 3px var(--e-2);
+}
+
+.barra-categoria__nombre {
+  grid-area: nombre;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-categoria__importe {
+  grid-area: importe;
+  font-size: var(--t-sm);
+  font-weight: 650;
+}
+
+.barra-categoria__pct {
+  grid-area: pct;
+  min-width: 42px;
+  text-align: right;
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}
+
+.barra-categoria__pista {
+  grid-area: pista;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--c-superficie-3);
+  overflow: hidden;
+}
+
+.barra-categoria__relleno {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+}
+
+/* Recharts pinta su SVG dentro de un div que hay que dejar encogerse, o la
+   gráfica no se hace más pequeña al estrechar la ventana. */
+.recharts-responsive-container {
+  min-width: 0;
+}
