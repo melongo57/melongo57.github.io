@@ -4,7 +4,9 @@ import type {
   FechaISO,
   Id,
   LecturaOdometro,
+  Mantenimiento,
   Nuevo,
+  ReglaMantenimiento,
   TipoMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
@@ -157,4 +159,67 @@ export function registrarLectura(lectura: NuevaLectura): Promise<LecturaOdometro
 
 export function borrarLectura(id: Id): Promise<void> {
   return repo.lecturas.borrar(id);
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimientos
+// ---------------------------------------------------------------------------
+
+export interface DatosMantenimiento extends Nuevo<Mantenimiento> {
+  id?: Id;
+}
+
+export async function guardarMantenimiento(datos: DatosMantenimiento): Promise<Mantenimiento> {
+  if (datos.id) {
+    const { id, ...cambios } = datos;
+    return repo.mantenimientos.actualizar(id, cambios);
+  }
+  return repo.mantenimientos.crear(datos);
+}
+
+export function borrarMantenimiento(id: Id): Promise<void> {
+  return repo.mantenimientos.borrar(id);
+}
+
+// ---------------------------------------------------------------------------
+// Reglas de recurrencia
+// ---------------------------------------------------------------------------
+
+export function guardarRegla(
+  id: Id,
+  cambios: Partial<Nuevo<ReglaMantenimiento>>,
+): Promise<ReglaMantenimiento> {
+  return repo.reglas.actualizar(id, cambios);
+}
+
+export function crearRegla(datos: Nuevo<ReglaMantenimiento>): Promise<ReglaMantenimiento> {
+  return repo.reglas.crear(datos);
+}
+
+export function borrarRegla(id: Id): Promise<void> {
+  return repo.reglas.borrar(id);
+}
+
+/**
+ * Reglas del vehículo, completadas con las que faltan de su plantilla.
+ *
+ * Un vehículo dado de alta antes de que existiera un tipo de mantenimiento
+ * —o al que se le cambia la categoría— se quedaría sin esa regla para
+ * siempre. Esto la crea al vuelo la primera vez que se abre el editor.
+ */
+export async function completarReglas(vehiculo: Vehiculo): Promise<void> {
+  const existentes = await repo.reglas.listarPorVehiculo(vehiculo.id);
+  const yaTiene = new Set(existentes.filter((r) => r.tipo !== 'otro').map((r) => r.tipo));
+
+  const plantilla = plantillaReglas(vehiculo.categoria, vehiculo.combustible);
+  for (const [tipo, regla] of Object.entries(plantilla)) {
+    if (!regla || yaTiene.has(tipo as TipoMantenimiento)) continue;
+    await repo.reglas.crear({
+      vehiculoId: vehiculo.id,
+      tipo: tipo as TipoMantenimiento,
+      ...(regla.cadaKm !== undefined ? { cadaKm: regla.cadaKm } : {}),
+      ...(regla.cadaMeses !== undefined ? { cadaMeses: regla.cadaMeses } : {}),
+      activa: true,
+    });
+  }
 }

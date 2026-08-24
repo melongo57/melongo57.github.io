@@ -3,7 +3,46 @@ import { db } from '@/datos/db.ts';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { claveMes, hoyISO } from '@/dominio/fechas.ts';
 import { estimarKm, kmAnuales, type EstimacionKm } from '@/dominio/odometro.ts';
-import type { Centimos, Id, PuntoOdometro, Vehiculo } from '@/dominio/tipos.ts';
+import {
+  calcularVencimientos,
+  resumirVencimientos,
+  type ResumenVencimientos,
+  type Vencimiento,
+} from '@/dominio/vencimientos.ts';
+import type {
+  Centimos,
+  Documento,
+  Id,
+  Mantenimiento,
+  PuntoOdometro,
+  ReglaMantenimiento,
+  Vehiculo,
+} from '@/dominio/tipos.ts';
+
+/** Todo lo que el motor de vencimientos necesita leer de un vehículo. */
+async function cargarParaVencimientos(vehiculo: Vehiculo) {
+  const [puntos, reglas, mantenimientos, documentos, ajustes] = await Promise.all([
+    repo.puntosOdometro(vehiculo.id),
+    repo.reglas.listarPorVehiculo(vehiculo.id),
+    repo.mantenimientos.listarPorVehiculo(vehiculo.id),
+    repo.documentos.listarPorVehiculo(vehiculo.id),
+    repo.ajustes.obtener(),
+  ]);
+
+  const estimacion = estimarKm(puntos, vehiculo);
+  return {
+    puntos,
+    estimacion,
+    vencimientos: calcularVencimientos({
+      vehiculo,
+      reglas,
+      mantenimientos,
+      documentos,
+      estimacion,
+      ajustes,
+    }),
+  };
+}
 
 /**
  * Consultas reactivas.
@@ -54,15 +93,17 @@ export interface ResumenPanel {
   /** Repostajes + mantenimientos + gastos del mes en curso. */
   gastoDelMesCentimos: Centimos;
   registrosDelMes: number;
+  vencimientos: ResumenVencimientos;
 }
 
 async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel> {
-  const [puntos, repostajes, mantenimientos, gastos] = await Promise.all([
-    repo.puntosOdometro(vehiculo.id),
-    db.repostajes.where('vehiculoId').equals(vehiculo.id).toArray(),
-    db.mantenimientos.where('vehiculoId').equals(vehiculo.id).toArray(),
-    db.gastos.where('vehiculoId').equals(vehiculo.id).toArray(),
-  ]);
+  const [{ puntos, estimacion, vencimientos }, repostajes, mantenimientos, gastos] =
+    await Promise.all([
+      cargarParaVencimientos(vehiculo),
+      db.repostajes.where('vehiculoId').equals(vehiculo.id).toArray(),
+      db.mantenimientos.where('vehiculoId').equals(vehiculo.id).toArray(),
+      db.gastos.where('vehiculoId').equals(vehiculo.id).toArray(),
+    ]);
 
   const delMes = <T extends { fecha: string }>(lista: T[]): T[] =>
     lista.filter((r) => claveMes(r.fecha) === mes);
@@ -73,8 +114,9 @@ async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel>
 
   return {
     vehiculo,
-    estimacion: estimarKm(puntos, vehiculo),
+    estimacion,
     kmAlAnio: kmAnuales(puntos),
+    vencimientos: resumirVencimientos(vencimientos),
     gastoDelMesCentimos:
       repostajesMes.reduce((t, r) => t + r.importeCentimos, 0) +
       mantenimientosMes.reduce((t, m) => t + m.costeCentimos, 0) +
@@ -103,6 +145,7 @@ export interface DetalleVehiculo {
   puntos: PuntoOdometro[];
   estimacion: EstimacionKm;
   kmAlAnio: number;
+  vencimientos: Vencimiento[];
   totales: {
     repostajes: number;
     mantenimientos: number;
@@ -118,19 +161,21 @@ export function useDetalleVehiculo(id: Id | undefined): DetalleVehiculo | undefi
     const vehiculo = await db.vehiculos.get(id);
     if (!vehiculo) return null;
 
-    const [puntos, repostajes, mantenimientos, gastos, documentos] = await Promise.all([
-      repo.puntosOdometro(id),
-      db.repostajes.where('vehiculoId').equals(id).toArray(),
-      db.mantenimientos.where('vehiculoId').equals(id).toArray(),
-      db.gastos.where('vehiculoId').equals(id).toArray(),
-      db.documentos.where('vehiculoId').equals(id).count(),
-    ]);
+    const [{ puntos, estimacion, vencimientos }, repostajes, mantenimientos, gastos, documentos] =
+      await Promise.all([
+        cargarParaVencimientos(vehiculo),
+        db.repostajes.where('vehiculoId').equals(id).toArray(),
+        db.mantenimientos.where('vehiculoId').equals(id).toArray(),
+        db.gastos.where('vehiculoId').equals(id).toArray(),
+        db.documentos.where('vehiculoId').equals(id).count(),
+      ]);
 
     return {
       vehiculo,
       puntos,
-      estimacion: estimarKm(puntos, vehiculo),
+      estimacion,
       kmAlAnio: kmAnuales(puntos),
+      vencimientos,
       totales: {
         repostajes: repostajes.length,
         mantenimientos: mantenimientos.length,
@@ -151,5 +196,32 @@ export function useLecturas(vehiculoId: Id | undefined) {
     if (!vehiculoId) return [];
     const lecturas = await repo.lecturas.listarPorVehiculo(vehiculoId);
     return lecturas.reverse();
+  }, [vehiculoId]);
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimientos y reglas
+// ---------------------------------------------------------------------------
+
+/** Mantenimientos del vehículo, del más reciente al más antiguo. */
+export function useMantenimientos(vehiculoId: Id | undefined): Mantenimiento[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    const lista = await repo.mantenimientos.listarPorVehiculo(vehiculoId);
+    return lista.reverse();
+  }, [vehiculoId]);
+}
+
+export function useReglas(vehiculoId: Id | undefined): ReglaMantenimiento[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    return repo.reglas.listarPorVehiculo(vehiculoId);
+  }, [vehiculoId]);
+}
+
+export function useDocumentos(vehiculoId: Id | undefined): Documento[] | undefined {
+  return useLiveQuery(async () => {
+    if (!vehiculoId) return [];
+    return repo.documentos.listarPorVehiculo(vehiculoId);
   }, [vehiculoId]);
 }

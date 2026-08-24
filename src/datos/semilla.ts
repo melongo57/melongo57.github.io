@@ -271,6 +271,30 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     adjuntoIds: [],
   });
 
+  const fechaFiltros = sumarMeses(hoy, -5);
+  await repo.mantenimientos.crear({
+    vehiculoId: golf.id,
+    tipo: 'filtros',
+    fecha: fechaFiltros,
+    km: enFechaGolf(fechaFiltros),
+    taller: 'Talleres Muñoz',
+    costeCentimos: euros(62.3),
+    piezas: ['Filtro de habitáculo', 'Filtro de aire'],
+    adjuntoIds: [],
+  });
+
+  const fechaBateria = sumarMeses(hoy, -14);
+  await repo.mantenimientos.crear({
+    vehiculoId: golf.id,
+    tipo: 'bateria',
+    fecha: fechaBateria,
+    km: enFechaGolf(fechaBateria),
+    taller: 'Norauto Las Rozas',
+    costeCentimos: euros(118.5),
+    piezas: ['Batería 70 Ah AGM'],
+    adjuntoIds: [],
+  });
+
   // Lectura manual reciente: el usuario miró el cuadro sin repostar.
   const fechaLectura = sumarDias(hoy, -3);
   await repo.lecturas.crear({
@@ -450,6 +474,31 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     adjuntoIds: [],
   });
 
+  const bateriaZoe = sumarMeses(hoy, -13);
+  await repo.mantenimientos.crear({
+    vehiculoId: zoe.id,
+    tipo: 'bateria',
+    fecha: bateriaZoe,
+    km: enFecha(kmZoe, bateriaZoe),
+    taller: 'Renault Alcobendas',
+    costeCentimos: euros(96),
+    piezas: ['Batería auxiliar de 12 V'],
+    adjuntoIds: [],
+  });
+
+  const frenosZoe = sumarMeses(hoy, -6);
+  await repo.mantenimientos.crear({
+    vehiculoId: zoe.id,
+    tipo: 'frenos',
+    fecha: frenosZoe,
+    km: enFecha(kmZoe, frenosZoe),
+    taller: 'Confortauto',
+    costeCentimos: euros(142),
+    piezas: ['Pastillas delanteras'],
+    notas: 'Duran mucho por la retención regenerativa.',
+    adjuntoIds: [],
+  });
+
   await repo.documentos.crear({
     vehiculoId: zoe.id,
     tipo: 'itv',
@@ -598,6 +647,31 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     taller: 'Fiat Professional Huesca',
     costeCentimos: euros(178.4),
     piezas: ['Aceite 5W30 7 l', 'Filtro de aceite', 'Filtro de combustible'],
+    adjuntoIds: [],
+  });
+
+  const bateriaCamper = sumarMeses(hoy, -20);
+  await repo.mantenimientos.crear({
+    vehiculoId: camper.id,
+    tipo: 'bateria',
+    fecha: bateriaCamper,
+    km: enFecha(kmCamper, bateriaCamper),
+    taller: 'Caravanas Pirineo',
+    costeCentimos: euros(214),
+    piezas: ['Batería de servicio AGM 100 Ah'],
+    notas: 'La de servicio, no la del motor.',
+    adjuntoIds: [],
+  });
+
+  const filtrosCamper = sumarMeses(hoy, -13);
+  await repo.mantenimientos.crear({
+    vehiculoId: camper.id,
+    tipo: 'filtros',
+    fecha: filtrosCamper,
+    km: enFecha(kmCamper, filtrosCamper),
+    taller: 'Fiat Professional Huesca',
+    costeCentimos: euros(84),
+    piezas: ['Filtro de habitáculo', 'Filtro de aire'],
     adjuntoIds: [],
   });
 
