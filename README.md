@@ -4,10 +4,10 @@ Gestión personal de vehículos: mantenimientos, repostajes, gastos y vencimient
 aplicación web instalable que funciona sin conexión y guarda los datos en tu propio
 dispositivo.
 
-> **Estado: fase 5 de 7 completada.** Funcionan el panel con semáforo y consumo real, los
-> vehículos, kilómetros, mantenimientos con recurrencias, repostajes, gastos, documentos con
-> adjuntos, la agenda de vencimientos y la exportación al calendario. Faltan las gráficas y
-> la exportación completa de datos.
+> **Estado: las siete fases están completas.** Vehículos, kilómetros, mantenimientos con
+> recurrencias, repostajes, gastos, documentos con adjuntos, agenda con exportación al
+> calendario, análisis con gráficas y detección de anomalías, y copia de seguridad completa.
+> Instalable y funcionando sin conexión.
 
 ## Arranque
 
@@ -26,6 +26,10 @@ No hay servicios externos, ni claves de API, ni contenedores, ni base de datos q
 | `npm run build` | Comprueba tipos y compila a `dist/` |
 | `npm run preview` | Sirve `dist/` para probar la PWA compilada |
 | `npm run iconos` | Regenera los PNG del manifest |
+
+El service worker solo funciona en la versión compilada: `npm run build && npm run preview`.
+En desarrollo está desactivado a propósito, porque cachear durante el desarrollo obliga a
+pelearse con versiones viejas en cada recarga.
 
 Para probarla en el móvil desde la misma red WiFi: `npm run dev -- --host` y abre la IP que
 imprime. Ten en cuenta que sin HTTPS el navegador no permite instalar la PWA ni usar
@@ -121,6 +125,7 @@ src/
 │   ├── consumo.ts     Consumo real de lleno a lleno
 │   ├── costes.ts      Coste por kilómetro y de propiedad
 │   ├── calendario.ts  Agenda futura y exportación a .ics
+│   ├── anomalias.ts   Detección de subidas de consumo
 │   └── validacion.ts  Reglas de entrada: errores frente a avisos
 ├── datos/       Persistencia.
 │   ├── db.ts               Esquema, índices y migraciones de IndexedDB
@@ -128,6 +133,8 @@ src/
 │   ├── repositorioDexie.ts Implementación sobre Dexie
 │   ├── acciones.ts         Escrituras que abarcan varias tablas
 │   ├── imagenes.ts         Recompresión de fotos antes de guardarlas
+│   ├── exportacion.ts      Copia de seguridad completa en JSON
+│   ├── csv.ts              Exportación de gastos para Excel
 │   └── semilla.ts          Datos de ejemplo
 ├── ui/          React.
 │   ├── layout/        Armazón y navegación
@@ -253,6 +260,46 @@ Es un requisito explícito, y el formulario está construido a su alrededor:
 Todo lo raro —el repostaje parcial, la serie rota— existe, pero está plegado bajo «algo no
 cuadra» para que no estorbe en el caso normal.
 
+### Detección de anomalías de consumo
+
+Una subida sostenida del consumo suele significar algo: neumáticos desinflados, un filtro
+sucio, un inyector que gotea, unos frenos que rozan. Dos decisiones evitan que el aviso se
+convierta en ruido:
+
+- **Se compara con la mediana, no con la media.** Un solo depósito raro —un viaje de
+  montaña, una semana de atascos, un repostaje mal anotado— desplaza la media lo suficiente
+  como para inventarse una avería.
+- **Hacen falta tres tramos seguidos por encima.** Uno es ruido. Avisar del primero
+  convierte la alerta en algo que se ignora, que es igual que no tenerla.
+
+Un tramo suelto muy desviado se señala aparte y con otras palabras: casi siempre es un dato
+mal anotado y no una avería.
+
+### La copia de seguridad
+
+El JSON lleva **todo**: vehículos, histórico, ajustes y las fotos. Con él se reconstruye la
+app entera en otro dispositivo, y es también la forma de pasar los datos del móvil al
+ordenador.
+
+Los Blobs van en base64, que es la parte fea: JSON no sabe llevar binarios y las fotos
+crecen un 33 %. La alternativa sería un ZIP, que obligaría a añadir una librería y a que el
+archivo dejara de poder abrirse con un editor de texto. Como las imágenes ya se recomprimen
+al guardarse, el tamaño se mantiene manejable.
+
+**El formato lleva número de versión desde el primer día.** Sin él, el primer cambio de
+esquema convierte todas las copias anteriores en basura, y una copia que no se puede
+restaurar no es una copia. Una copia de una versión más nueva se rechaza con un mensaje
+claro en lugar de importarse a medias.
+
+**Importar reemplaza, no fusiona**, y se avisa antes con el recuento de lo que trae el
+archivo. Mezclar dos bases sin sincronización de verdad produce duplicados silenciosos. La
+validación ocurre **antes** de tocar la base: importar un archivo equivocado no puede
+dejarte sin datos y sin copia.
+
+El CSV de gastos usa **punto y coma** como separador y **coma decimal**, porque es lo que
+espera Excel en español —con comas, el archivo entero aterriza en una sola columna— y lleva
+un BOM UTF-8, sin el cual las tildes salen destrozadas.
+
 ### Errores frente a avisos
 
 `src/dominio/validacion.ts` distingue dos gravedades, y la diferencia es de producto, no
@@ -325,7 +372,7 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-280 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+333 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
 vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
@@ -340,6 +387,15 @@ el consumo que sale del motor se parece al que se sembró. Cazaron un fallo real
 repostaje parcial, el siguiente no recuperaba lo que había faltado— que hacía que la app
 enseñara un consumo por debajo del real.
 
+Otros dos fallos reales que salieron al usar la app y que ahora tienen test:
+
+- **Leer los ajustes escribía en la base.** Si no existían, se creaban «de paso». Como
+  `useLiveQuery` ejecuta sus consultas dentro de una transacción de solo lectura, la app
+  entera reventaba con `ReadOnlyError` en cuanto los ajustes faltaban: justo después de un
+  «borrar todo» o de una importación.
+- **Las reglas sin registro previo se anunciaban como vencidas hace años**, lo que llenaba
+  el panel de rojos falsos y ahogaba el único aviso real.
+
 ```bash
 npm test
 ```
@@ -351,8 +407,8 @@ npm test
 - [x] **Fase 3** — Mantenimientos y motor de cálculo de vencimientos
 - [x] **Fase 4** — Repostajes y gastos, con consumo y coste por kilómetro
 - [x] **Fase 5** — Documentos, adjuntos y avisos (notificaciones + `.ics`)
-- [ ] **Fase 6** — Analíticas y gráficas
-- [ ] **Fase 7** — PWA completa: offline, instalable, exportación e importación
+- [x] **Fase 6** — Analíticas y gráficas
+- [x] **Fase 7** — PWA completa: offline, instalable, exportación e importación
 
 ## Fuera de alcance
 
