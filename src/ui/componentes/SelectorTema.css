@@ -1,0 +1,40 @@
+.selector-tema {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--c-superficie-2);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-full);
+}
+
+.selector-tema__opcion {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-full);
+  font-size: var(--t-base);
+  color: var(--c-texto-suave);
+  transition: background var(--transicion), color var(--transicion);
+}
+
+/*
+ * La píldora mide 34 px porque visualmente no debe pesar más que eso, pero el
+ * dedo necesita 48. Se amplía el área sensible sin tocar el dibujo.
+ */
+.selector-tema__opcion::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--tactil) - 34px) / -2);
+}
+
+.selector-tema__opcion:hover {
+  color: var(--c-texto);
+}
+
+.selector-tema__opcion.es-activa {
+  background: var(--c-superficie);
+  color: var(--c-acento);
+  box-shadow: var(--sombra-1);
+}
