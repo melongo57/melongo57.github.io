@@ -1,0 +1,32 @@
+.avisos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.avisos__texto {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}
+
+.avisos__texto--destacado {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-acento-suave);
+  border: 1px solid var(--c-acento-borde);
+  color: var(--c-acento);
+}
+
+.avisos__estado {
+  font-size: var(--t-sm);
+  font-weight: 620;
+}
+
+.avisos__estado.es-ok {
+  color: var(--c-ok);
+}
+
+.avisos__estado.es-neutro {
+  color: var(--c-texto-tenue);
+  font-weight: 500;
+}
