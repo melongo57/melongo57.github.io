@@ -1,5 +1,11 @@
 import { diasEntre, esFechaISO, hoyISO } from './fechas.ts';
-import type { CategoriaVehiculo, FechaISO, PuntoOdometro, TipoCombustible } from './tipos.ts';
+import type {
+  CategoriaVehiculo,
+  FechaISO,
+  PuntoOdometro,
+  TipoCombustible,
+  TipoMantenimiento,
+} from './tipos.ts';
 
 /**
  * Validación de las entradas del usuario.
@@ -268,4 +274,95 @@ export function validarVehiculo(
 /** Incidencias de un campo concreto, para pintarlas junto al input. */
 export function incidenciasDe(validacion: Validacion, campo: string): Incidencia[] {
   return validacion.incidencias.filter((i) => i.campo === campo);
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimientos
+// ---------------------------------------------------------------------------
+
+export interface MantenimientoAValidar {
+  fecha: FechaISO;
+  km?: number;
+  costeCentimos: number;
+  tipo: TipoMantenimiento;
+  tipoPersonalizado?: string;
+}
+
+/**
+ * Valida un mantenimiento.
+ *
+ * Los kilómetros son opcionales —a veces solo recuerdas la fecha de la
+ * factura— pero si se indican tienen que encajar en el histórico, porque de
+ * ellos depende cuándo vuelve a tocar.
+ */
+export function validarMantenimiento(
+  puntos: readonly PuntoOdometro[],
+  datos: MantenimientoAValidar,
+  opciones: OpcionesLectura = {},
+): Validacion {
+  const { hoy = hoyISO() } = opciones;
+  const incidencias: Incidencia[] = [];
+
+  if (!esFechaISO(datos.fecha)) {
+    incidencias.push(error('fecha', 'La fecha no es válida.'));
+  } else if (datos.fecha > hoy) {
+    incidencias.push(aviso('fecha', 'La fecha es futura. ¿Es correcta?'));
+  }
+
+  if (datos.tipo === 'otro' && !datos.tipoPersonalizado?.trim()) {
+    incidencias.push(
+      error('tipoPersonalizado', 'Ponle nombre para poder darle su propia recurrencia.'),
+    );
+  }
+
+  if (!Number.isFinite(datos.costeCentimos) || datos.costeCentimos < 0) {
+    incidencias.push(error('coste', 'El coste no puede ser negativo.'));
+  }
+
+  if (datos.km !== undefined) {
+    // Se reutiliza la validación de lectura: un mantenimiento con kilómetros
+    // es, a efectos del odómetro, exactamente eso.
+    const deLectura = validarLectura(puntos, { fecha: datos.fecha, km: datos.km }, opciones);
+    incidencias.push(...deLectura.incidencias.filter((i) => i.campo === 'km'));
+  }
+
+  return resultado(incidencias);
+}
+
+// ---------------------------------------------------------------------------
+// Reglas de recurrencia
+// ---------------------------------------------------------------------------
+
+export interface ReglaAValidar {
+  cadaKm?: number;
+  cadaMeses?: number;
+  avisoKm?: number;
+  avisoDias?: number;
+}
+
+export function validarRegla(datos: ReglaAValidar): Validacion {
+  const incidencias: Incidencia[] = [];
+
+  if (datos.cadaKm === undefined && datos.cadaMeses === undefined) {
+    // Una regla que no puede vencer por nada es peor que no tenerla: da
+    // sensación de estar cubierto sin avisar jamás.
+    incidencias.push(
+      error('cadaKm', 'Indica cada cuántos kilómetros, cada cuántos meses, o las dos cosas.'),
+    );
+  }
+
+  if (datos.cadaKm !== undefined && datos.cadaKm <= 0) {
+    incidencias.push(error('cadaKm', 'El intervalo tiene que ser mayor que cero.'));
+  }
+  if (datos.cadaMeses !== undefined && datos.cadaMeses <= 0) {
+    incidencias.push(error('cadaMeses', 'El intervalo tiene que ser mayor que cero.'));
+  }
+
+  if (datos.avisoKm !== undefined && datos.cadaKm !== undefined && datos.avisoKm >= datos.cadaKm) {
+    incidencias.push(
+      aviso('avisoKm', 'Avisarías desde el día siguiente al último cambio. ¿Es lo que quieres?'),
+    );
+  }
+
+  return resultado(incidencias);
 }

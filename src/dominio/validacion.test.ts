@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PuntoOdometro } from './tipos.ts';
-import { incidenciasDe, validarLectura, validarVehiculo } from './validacion.ts';
+import {
+  incidenciasDe,
+  validarLectura,
+  validarMantenimiento,
+  validarRegla,
+  validarVehiculo,
+} from './validacion.ts';
 
 function p(fecha: string, km: number, refId = fecha): PuntoOdometro {
   return { fecha, km, origen: 'manual', refId };
@@ -202,5 +208,93 @@ describe('validarVehiculo', () => {
     const v = validarVehiculo({ ...base, anio: 2018, fechaCompra: '2016-01-01' }, { hoy: HOY });
     expect(v.valido).toBe(true);
     expect(incidenciasDe(v, 'fechaCompra')).toHaveLength(1);
+  });
+});
+
+describe('validarMantenimiento', () => {
+  const historico = [p('2026-06-01', 120000), p('2026-08-01', 125000)];
+
+  const base = {
+    fecha: '2026-08-10',
+    km: 125400,
+    costeCentimos: 9640,
+    tipo: 'aceite',
+  } as const;
+
+  it('acepta un registro coherente', () => {
+    const v = validarMantenimiento(historico, base, { hoy: HOY });
+    expect(v.valido).toBe(true);
+    expect(v.requiereConfirmacion).toBe(false);
+  });
+
+  it('permite no anotar los kilómetros', () => {
+    // A veces solo tienes la fecha de la factura, y es mejor guardar eso que
+    // nada: el vencimiento por tiempo sigue funcionando.
+    const { km, ...sinKm } = base;
+    void km;
+    expect(validarMantenimiento(historico, sinKm, { hoy: HOY }).valido).toBe(true);
+  });
+
+  it('hereda el aviso de odómetro que retrocede', () => {
+    const v = validarMantenimiento(historico, { ...base, km: 119000 }, { hoy: HOY });
+    expect(v.valido).toBe(true);
+    expect(incidenciasDe(v, 'km')).toHaveLength(1);
+  });
+
+  it('rechaza un coste negativo', () => {
+    expect(
+      validarMantenimiento(historico, { ...base, costeCentimos: -100 }, { hoy: HOY }).valido,
+    ).toBe(false);
+  });
+
+  it('exige nombre en los mantenimientos de tipo «otro»', () => {
+    const sinNombre = validarMantenimiento(
+      historico,
+      { ...base, tipo: 'otro' },
+      { hoy: HOY },
+    );
+    expect(sinNombre.valido).toBe(false);
+    expect(incidenciasDe(sinNombre, 'tipoPersonalizado')).toHaveLength(1);
+
+    const conNombre = validarMantenimiento(
+      historico,
+      { ...base, tipo: 'otro', tipoPersonalizado: 'Amortiguadores' },
+      { hoy: HOY },
+    );
+    expect(conNombre.valido).toBe(true);
+  });
+
+  it('avisa de una fecha futura', () => {
+    const v = validarMantenimiento(historico, { ...base, fecha: '2027-01-01' }, { hoy: HOY });
+    expect(incidenciasDe(v, 'fecha')).toHaveLength(1);
+  });
+});
+
+describe('validarRegla', () => {
+  it('acepta una regla con cualquiera de las dos dimensiones', () => {
+    expect(validarRegla({ cadaKm: 15000 }).valido).toBe(true);
+    expect(validarRegla({ cadaMeses: 12 }).valido).toBe(true);
+    expect(validarRegla({ cadaKm: 15000, cadaMeses: 12 }).valido).toBe(true);
+  });
+
+  it('rechaza una regla que no puede vencer por nada', () => {
+    // Sería peor que no tenerla: da sensación de estar cubierto sin avisar.
+    const v = validarRegla({});
+    expect(v.valido).toBe(false);
+    expect(incidenciasDe(v, 'cadaKm')).toHaveLength(1);
+  });
+
+  it('rechaza intervalos de cero o negativos', () => {
+    expect(validarRegla({ cadaKm: 0 }).valido).toBe(false);
+    expect(validarRegla({ cadaMeses: -3 }).valido).toBe(false);
+  });
+
+  it('avisa si la antelación se come el intervalo entero', () => {
+    // Avisar 15.000 km antes de un intervalo de 15.000 km es avisar siempre.
+    const v = validarRegla({ cadaKm: 15000, avisoKm: 15000 });
+    expect(v.valido).toBe(true);
+    expect(incidenciasDe(v, 'avisoKm')).toHaveLength(1);
+
+    expect(validarRegla({ cadaKm: 15000, avisoKm: 1000 }).requiereConfirmacion).toBe(false);
   });
 });
