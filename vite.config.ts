@@ -1,11 +1,46 @@
+import { copyFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/**
+ * Copia `index.html` a `404.html` al construir.
+ *
+ * GitHub Pages sirve ficheros estaticos y no sabe nada de rutas de cliente:
+ * al pedir /agenda busca un fichero llamado asi, no lo encuentra y devuelve su
+ * pagina de error. Servir el index como 404 hace que la app arranque igual y
+ * React Router lea la ruta de `location.pathname`, que es el equivalente al
+ * redirect `/* -> /index.html` que ya hay en netlify.toml.
+ *
+ * No basta con el `navigateFallback` del service worker: ese solo actua cuando
+ * el service worker YA esta instalado. La primera visita a un enlace profundo
+ * —justo el caso de compartir una URL— llega antes de que exista.
+ *
+ * Queda excluido del precache con `globIgnores`: seria una segunda copia byte
+ * a byte del index, y el service worker nunca llegaria a servirla porque las
+ * navegaciones ya caen en `navigateFallback`.
+ */
+function paginaDeErrorComoIndice(): Plugin {
+  return {
+    name: 'pagina-404-spa',
+    apply: 'build',
+    enforce: 'post',
+    closeBundle() {
+      const salida = resolve(fileURLToPath(new URL('./dist', import.meta.url)));
+      const indice = resolve(salida, 'index.html');
+      if (!existsSync(indice)) return;
+      copyFileSync(indice, resolve(salida, '404.html'));
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     react(),
+    paginaDeErrorComoIndice(),
     /*
      * `registerType: 'prompt'` a propósito: una versión nueva no se aplica
      * sola. Recargar por sorpresa a alguien que está a medio anotar un
@@ -17,6 +52,9 @@ export default defineConfig({
       manifest: false, // usamos public/manifest.webmanifest, escrito a mano
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Copia identica del index para el fallback de GitHub Pages: cachearla
+        // seria guardar lo mismo dos veces y no la sirve nadie.
+        globIgnores: ['404.html'],
         // Las rutas de la app son del lado del cliente: cualquier navegación
         // se sirve con el index y React Router decide qué pintar. Sin esto,
         // abrir /agenda sin conexión daría un 404.
