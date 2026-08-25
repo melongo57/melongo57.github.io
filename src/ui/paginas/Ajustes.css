@@ -81,3 +81,10 @@
   left: var(--e-2);
   font-weight: 700;
 }
+
+.ajustes__pie {
+  padding: var(--e-4) 0 var(--e-8);
+  text-align: center;
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}

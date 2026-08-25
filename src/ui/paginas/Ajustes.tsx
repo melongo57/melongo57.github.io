@@ -128,6 +128,10 @@ export function Ajustes(): React.JSX.Element {
         </p>
       </section>
 
+      <footer className="ajustes__pie">
+        © {new Date().getFullYear()} DeWaLt
+      </footer>
+
       <HojaModal
         abierta={confirmando !== null}
         titulo={confirmando === 'borrar' ? '¿Borrar todos los datos?' : '¿Recargar el ejemplo?'}

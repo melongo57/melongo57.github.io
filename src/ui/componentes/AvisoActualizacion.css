@@ -1,4 +1,13 @@
-.aviso-sw {
+/*
+ * Contenedor de los avisos flotantes (versión nueva, instalación...).
+ *
+ * La posición fija vive aquí y no en `.aviso-sw`, para que dos avisos a la vez
+ * se apilen uno encima del otro en vez de superponerse exactamente en el
+ * mismo sitio: es lo que pasa nada más desplegar una versión nueva que además
+ * añade el aviso de instalación, que es exactamente lo que ocurrirá la
+ * primera vez que se vea este cartel.
+ */
+.avisos-flotantes {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -6,6 +15,19 @@
   bottom: calc(var(--e-8) + var(--e-3) + var(--seguro-abajo));
   z-index: 30;
 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+@media (min-width: 700px) {
+  .avisos-flotantes {
+    bottom: var(--e-5);
+  }
+}
+
+.aviso-sw {
   display: flex;
   align-items: center;
   gap: var(--e-3);
@@ -25,7 +47,7 @@
 
 @keyframes aviso-sw-entra {
   from {
-    transform: translate(-50%, 12px);
+    transform: translateY(12px);
     opacity: 0;
   }
 }
@@ -47,10 +69,4 @@
 .aviso-sw__cerrar:hover {
   background: var(--c-superficie-2);
   color: var(--c-texto);
-}
-
-@media (min-width: 700px) {
-  .aviso-sw {
-    bottom: var(--e-5);
-  }
 }
