@@ -41,16 +41,19 @@ export function ahoraISO(): InstanteISO {
 }
 
 /**
- * Día civil LOCAL en el que cayó un instante (`actualizadoEn`, `ultimaCopiaEn`...).
+ * Día civil en ESPAÑA en el que cayó un instante (`actualizadoEn`,
+ * `ultimaCopiaEn`...).
  *
  * `ahoraISO()` guarda el instante en UTC (termina en «Z»); cortar los diez
- * primeros caracteres da el día en UTC, no el de aquí. En España eso falla
- * justo de madrugada: a la 1:30 de un día en horario de verano (UTC+2) el
- * instante en UTC todavía marca las 23:30 del día anterior, así que una copia
- * hecha "hoy" se enseñaría fechada "ayer".
+ * primeros caracteres da el día en UTC, no el de España. Eso falla justo de
+ * madrugada: a la 1:30 de un día en horario de verano (UTC+2) el instante en
+ * UTC todavía marca las 23:30 del día anterior, así que una copia hecha "hoy"
+ * se enseñaría fechada "ayer". Ver `partesEnEspana` para por qué esto usa un
+ * huso horario fijo en vez del del dispositivo.
  */
 export function fechaLocalDeInstante(instante: InstanteISO): FechaISO {
-  return aFechaISO(new Date(instante));
+  const { anio, mes, dia } = partesEnEspana(new Date(instante));
+  return `${anio}-${mes}-${dia}`;
 }
 
 /** Días naturales de `desde` a `hasta`. Negativo si `hasta` ya pasó. */
@@ -109,13 +112,38 @@ const FORMATO_LARGO = new Intl.DateTimeFormat('es-ES', {
 
 const FORMATO_MES = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
 
-const FORMATO_FECHA_HORA = new Intl.DateTimeFormat('es-ES', {
-  day: '2-digit',
-  month: '2-digit',
+/**
+ * Solo para convertir un INSTANTE (con hora y zona) a la hora de España, no
+ * para las fechas civiles del resto de este archivo. `timeZone` fijo a
+ * propósito: la app es de un usuario en España, y anclarlo aquí evita que la
+ * hora de una sincronización cambie si el dispositivo tuviera puesta otra
+ * zona (viajando, mal configurado...). También hace la conversión
+ * determinista sin depender de en qué zona esté la máquina que ejecuta esto,
+ * que es justo lo que hacía falta para poder probarlo.
+ */
+const ZONA_ESPANA = 'Europe/Madrid';
+
+const FORMATO_PARTES_ESPANA = new Intl.DateTimeFormat('es-ES', {
+  timeZone: ZONA_ESPANA,
   year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: 'h23',
 });
+
+function partesEnEspana(fecha: Date): { anio: string; mes: string; dia: string; hora: string; minuto: string } {
+  const partes = FORMATO_PARTES_ESPANA.formatToParts(fecha);
+  const parte = (tipo: string): string => partes.find((p) => p.type === tipo)?.value ?? '';
+  return {
+    anio: parte('year'),
+    mes: parte('month'),
+    dia: parte('day'),
+    hora: parte('hour'),
+    minuto: parte('minute'),
+  };
+}
 
 /** '14/03/2026' */
 export function formatearFecha(fecha: FechaISO): string {
@@ -128,16 +156,18 @@ export function formatearFechaLarga(fecha: FechaISO): string {
 }
 
 /**
- * '25/08/2026 · 20:30', en la hora LOCAL del dispositivo, a partir de un
- * instante completo (`InstanteISO`, con hora y zona) — no de una fecha civil.
+ * '25/08/2026 · 20:30', en la hora de España, a partir de un instante
+ * completo (`InstanteISO`, con hora y zona) — no de una fecha civil.
  *
- * `Intl.DateTimeFormat` ya hace la conversión de UTC a local por su cuenta;
- * el bug de `EstadoDatos`/`Sincronizacion` no era de conversión sino de
+ * El bug de `EstadoDatos`/`Sincronizacion` no era de conversión sino de
  * cortar el texto del ISO a mano (`slice(0, 10)`, `slice(11, 16)`), que
- * coge los componentes en UTC tal cual, sin convertir nada.
+ * coge los componentes en UTC tal cual, sin convertir nada. Ver
+ * `partesEnEspana` para por qué esto usa un huso horario fijo en vez del
+ * del dispositivo.
  */
 export function formatearFechaHora(instante: InstanteISO): string {
-  return FORMATO_FECHA_HORA.format(new Date(instante)).replace(', ', ' · ');
+  const { anio, mes, dia, hora, minuto } = partesEnEspana(new Date(instante));
+  return `${dia}/${mes}/${anio} · ${hora}:${minuto}`;
 }
 
 /** 'marzo de 2026' a partir de una clave 'YYYY-MM'. */

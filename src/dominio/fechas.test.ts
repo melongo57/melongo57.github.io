@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   aFechaISO,
   claveMes,
@@ -36,44 +36,35 @@ describe('conversión ISO ↔ Date', () => {
 });
 
 describe('fechaLocalDeInstante', () => {
-  const zonaOriginal = process.env.TZ;
-
-  afterEach(() => {
-    process.env.TZ = zonaOriginal;
-  });
-
+  /*
+   * Sin tocar `process.env.TZ`: la función fija el huso a Europe/Madrid por
+   * dentro, así que el resultado tiene que ser el mismo sin importar en qué
+   * zona esté la máquina que ejecuta el test (la de desarrollo, la del
+   * runner de CI...). Antes esto dependía de `new Date().getFullYear()` y
+   * compañía, que leen la zona del PROCESO, no una fija — y cambiar
+   * `process.env.TZ` a mitad de ejecución no movía un `Intl.DateTimeFormat`
+   * ya construido, así que el test pasaba por casualidad en esta máquina y
+   * fallaba de verdad en el runner de GitHub, que va en UTC.
+   */
   it('usa el día de España, no el de UTC, de madrugada', () => {
-    /*
-     * `ahoraISO()` guarda el instante en UTC. En verano España va dos horas
-     * por delante (UTC+2): a las 00:30 de un 16 de julio en Madrid, el
-     * instante en UTC todavía marca las 22:30 del 15. Cortar los diez
-     * primeros caracteres del ISO (lo que hacía antes `EstadoDatos`) daba el
-     * 15, un día por detrás de lo que de verdad marcaba el reloj de España.
-     */
-    process.env.TZ = 'Europe/Madrid';
+    // `ahoraISO()` guarda el instante en UTC. En verano España va dos horas
+    // por delante (UTC+2): a las 00:30 de un 16 de julio en Madrid, el
+    // instante en UTC todavía marca las 22:30 del 15.
     expect(fechaLocalDeInstante('2026-07-15T22:30:00.000Z')).toBe('2026-07-16');
   });
 
   it('también corrige el caso contrario, en invierno', () => {
     // En invierno (UTC+1), las 23:30 UTC del día 14 son las 00:30 del 15 en
     // Madrid: el mismo desfase, un día antes en vez de después.
-    process.env.TZ = 'Europe/Madrid';
     expect(fechaLocalDeInstante('2026-01-14T23:30:00.000Z')).toBe('2026-01-15');
   });
 
   it('coincide con UTC cuando no hay desfase de madrugada de por medio', () => {
-    process.env.TZ = 'Europe/Madrid';
     expect(fechaLocalDeInstante('2026-07-15T10:00:00.000Z')).toBe('2026-07-15');
   });
 });
 
 describe('formatearFechaHora', () => {
-  const zonaOriginal = process.env.TZ;
-
-  afterEach(() => {
-    process.env.TZ = zonaOriginal;
-  });
-
   it('convierte también la hora, no solo el día', () => {
     /*
      * Este es el fallo de «Última sincronización»: se enseñaba cortando el
@@ -82,17 +73,14 @@ describe('formatearFechaHora', () => {
      * sincronización a las 20:30 en Madrid (UTC+2, verano) se guarda como
      * las 18:30 en UTC, y se enseñaba «18:30» en vez de «20:30».
      */
-    process.env.TZ = 'Europe/Madrid';
     expect(formatearFechaHora('2026-07-15T18:30:00.000Z')).toBe('15/07/2026 · 20:30');
   });
 
   it('también arrastra el cambio de día cuando la hora lo cruza', () => {
-    process.env.TZ = 'Europe/Madrid';
     expect(formatearFechaHora('2026-07-15T22:30:00.000Z')).toBe('16/07/2026 · 00:30');
   });
 
   it('usa el desfase de invierno cuando toca', () => {
-    process.env.TZ = 'Europe/Madrid';
     expect(formatearFechaHora('2026-01-14T23:30:00.000Z')).toBe('15/01/2026 · 00:30');
   });
 });
