@@ -43,39 +43,12 @@
   color: var(--c-aviso);
 }
 
-.estado-datos__accion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e-2);
-  padding-top: var(--e-2);
-  border-top: 1px solid var(--c-borde);
-}
-
-.estado-datos__accion p {
-  font-size: var(--t-sm);
-  color: var(--c-texto-suave);
-}
-
-.estado-datos__accion .boton {
-  align-self: flex-start;
-}
-
 .estado-datos__aviso {
   padding: var(--e-3);
   border-radius: var(--r-md);
   background: var(--c-aviso-fondo);
   border: 1px solid var(--c-aviso-borde);
   color: var(--c-aviso);
-  font-size: var(--t-sm);
-  line-height: 1.5;
-}
-
-.estado-datos__denegado {
-  padding: var(--e-3);
-  border-radius: var(--r-md);
-  background: var(--c-superficie-3);
-  border: 1px solid var(--c-borde-fuerte);
-  color: var(--c-texto-suave);
   font-size: var(--t-sm);
   line-height: 1.5;
 }

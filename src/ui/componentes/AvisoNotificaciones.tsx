@@ -34,13 +34,8 @@ export function AvisoNotificaciones(): React.JSX.Element {
   return (
     <div className="avisos">
       <p className="avisos__texto">
-        La app puede avisarte de lo que vence <strong>cuando la abres</strong>. Eso es todo lo
-        que permite un navegador: no existe forma de programar un aviso a treinta días vista
-        con la aplicación cerrada.
-      </p>
-      <p className="avisos__texto avisos__texto--destacado">
-        Para el recordatorio de verdad, exporta los vencimientos a tu calendario desde la
-        <strong> Agenda</strong>. De eso sí se encarga Google Calendar aunque no abras nada.
+        Solo avisa con la app abierta; para un aviso de verdad, expórtalo a tu calendario
+        desde la <strong>Agenda</strong>.
       </p>
 
       {estado === 'no_soportado' ? (
