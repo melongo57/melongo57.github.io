@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/datos/db.ts';
+import { db, estaVivo, sinBorrados } from '@/datos/db.ts';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { claveMes, hoyISO } from '@/dominio/fechas.ts';
 import { estimarKm, kmAnuales, type EstimacionKm } from '@/dominio/odometro.ts';
@@ -81,7 +81,7 @@ async function cargarParaVencimientos(vehiculo: Vehiculo) {
 export function useVehiculos(opciones: { incluirVendidos?: boolean } = {}): Vehiculo[] | undefined {
   const { incluirVendidos = true } = opciones;
   return useLiveQuery(async () => {
-    const todos = await db.vehiculos.orderBy('orden').toArray();
+    const todos = sinBorrados(await db.vehiculos.orderBy('orden').toArray());
     return incluirVendidos ? todos : todos.filter((v) => v.estado === 'activo');
   }, [incluirVendidos]);
 }
@@ -89,7 +89,7 @@ export function useVehiculos(opciones: { incluirVendidos?: boolean } = {}): Vehi
 export function useVehiculo(id: Id | undefined): Vehiculo | undefined | null {
   return useLiveQuery(async () => {
     if (!id) return null;
-    return (await db.vehiculos.get(id)) ?? null;
+    return estaVivo(await db.vehiculos.get(id)) ?? null;
   }, [id]);
 }
 
@@ -121,13 +121,16 @@ export interface ResumenPanel {
 }
 
 async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel> {
-  const [{ puntos, estimacion, vencimientos }, repostajes, mantenimientos, gastos] =
+  const [{ puntos, estimacion, vencimientos }, repostajesConBorrados, mantenimientosConBorrados, gastosConBorrados] =
     await Promise.all([
       cargarParaVencimientos(vehiculo),
       db.repostajes.where('vehiculoId').equals(vehiculo.id).toArray(),
       db.mantenimientos.where('vehiculoId').equals(vehiculo.id).toArray(),
       db.gastos.where('vehiculoId').equals(vehiculo.id).toArray(),
     ]);
+  const repostajes = sinBorrados(repostajesConBorrados);
+  const mantenimientos = sinBorrados(mantenimientosConBorrados);
+  const gastos = sinBorrados(gastosConBorrados);
 
   const delMes = <T extends { fecha: string }>(lista: T[]): T[] =>
     lista.filter((r) => claveMes(r.fecha) === mes);
@@ -153,7 +156,7 @@ async function resumenDe(vehiculo: Vehiculo, mes: string): Promise<ResumenPanel>
 export function useResumenPanel(): ResumenPanel[] | undefined {
   return useLiveQuery(async () => {
     const mes = claveMes(hoyISO());
-    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const vehiculos = sinBorrados(await db.vehiculos.orderBy('orden').toArray());
     // Los vendidos no salen en el panel: no tienen nada pendiente y solo
     // restarían sitio a los que sí.
     const activos = vehiculos.filter((v) => v.estado === 'activo');
@@ -183,17 +186,25 @@ export interface DetalleVehiculo {
 export function useDetalleVehiculo(id: Id | undefined): DetalleVehiculo | undefined | null {
   return useLiveQuery(async () => {
     if (!id) return null;
-    const vehiculo = await db.vehiculos.get(id);
+    const vehiculo = estaVivo(await db.vehiculos.get(id));
     if (!vehiculo) return null;
 
-    const [{ puntos, estimacion, vencimientos }, repostajes, mantenimientos, gastos, documentos] =
-      await Promise.all([
-        cargarParaVencimientos(vehiculo),
-        db.repostajes.where('vehiculoId').equals(id).toArray(),
-        db.mantenimientos.where('vehiculoId').equals(id).toArray(),
-        db.gastos.where('vehiculoId').equals(id).toArray(),
-        db.documentos.where('vehiculoId').equals(id).count(),
-      ]);
+    const [
+      { puntos, estimacion, vencimientos },
+      repostajesConBorrados,
+      mantenimientosConBorrados,
+      gastosConBorrados,
+      documentos,
+    ] = await Promise.all([
+      cargarParaVencimientos(vehiculo),
+      db.repostajes.where('vehiculoId').equals(id).toArray(),
+      db.mantenimientos.where('vehiculoId').equals(id).toArray(),
+      db.gastos.where('vehiculoId').equals(id).toArray(),
+      repo.documentos.listarPorVehiculo(id),
+    ]);
+    const repostajes = sinBorrados(repostajesConBorrados);
+    const mantenimientos = sinBorrados(mantenimientosConBorrados);
+    const gastos = sinBorrados(gastosConBorrados);
 
     return {
       vehiculo,
@@ -205,7 +216,7 @@ export function useDetalleVehiculo(id: Id | undefined): DetalleVehiculo | undefi
         repostajes: repostajes.length,
         mantenimientos: mantenimientos.length,
         gastos: gastos.length,
-        documentos,
+        documentos: documentos.length,
         gastadoCentimos:
           repostajes.reduce((t, r) => t + r.importeCentimos, 0) +
           mantenimientos.reduce((t, m) => t + m.costeCentimos, 0) +
@@ -292,7 +303,7 @@ export interface AnalisisVehiculo {
 export function useAnalisis(vehiculoId: Id | undefined): AnalisisVehiculo | undefined | null {
   return useLiveQuery(async () => {
     if (!vehiculoId) return null;
-    const vehiculo = await db.vehiculos.get(vehiculoId);
+    const vehiculo = estaVivo(await db.vehiculos.get(vehiculoId));
     if (!vehiculo) return null;
 
     const [puntos, repostajes, mantenimientos, gastos] = await Promise.all([
@@ -325,7 +336,7 @@ export function useAnalisis(vehiculoId: Id | undefined): AnalisisVehiculo | unde
  */
 export function useAgenda(): EventoCalendario[] | undefined {
   return useLiveQuery(async () => {
-    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const vehiculos = sinBorrados(await db.vehiculos.orderBy('orden').toArray());
     const activos = vehiculos.filter((v) => v.estado === 'activo');
 
     const porVehiculo = await Promise.all(
@@ -348,7 +359,7 @@ export function useAgenda(): EventoCalendario[] | undefined {
 /** Todos los vencimientos de todos los vehículos activos, para las notificaciones. */
 export function useTodosLosVencimientos(): Vencimiento[] | undefined {
   return useLiveQuery(async () => {
-    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const vehiculos = sinBorrados(await db.vehiculos.orderBy('orden').toArray());
     const activos = vehiculos.filter((v) => v.estado === 'activo');
     const listas = await Promise.all(
       activos.map(async (v) => (await cargarParaVencimientos(v)).vencimientos),
@@ -363,7 +374,7 @@ export function useTodosLosVencimientos(): Vencimiento[] | undefined {
  */
 export function useComparativa(): FilaComparativa[] | undefined {
   return useLiveQuery(async () => {
-    const vehiculos = await db.vehiculos.orderBy('orden').toArray();
+    const vehiculos = sinBorrados(await db.vehiculos.orderBy('orden').toArray());
     const activos = vehiculos.filter((v) => v.estado === 'activo');
 
     const filas = await Promise.all(

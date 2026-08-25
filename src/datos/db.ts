@@ -3,6 +3,7 @@ import type {
   Adjunto,
   Ajustes,
   Documento,
+  EntidadBase,
   Gasto,
   LecturaOdometro,
   Mantenimiento,
@@ -10,6 +11,32 @@ import type {
   ReglaMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
+
+/**
+ * Quita los registros con tombstone.
+ *
+ * El borrado es logico para que se pueda sincronizar (ver `repositorioDexie`),
+ * pero para la interfaz un registro borrado no existe. Este filtro es el que
+ * sostiene esa ilusion, y tiene que aplicarse en TODA lectura de la base: uno
+ * que se olvide hace reaparecer registros borrados, que es de los fallos mas
+ * desconcertantes que puede tener una app — el dato vuelve sin que nadie lo
+ * haya tocado, y encima solo en las pantallas que leen `db` directamente en
+ * vez de pasar por el repositorio.
+ *
+ * Vive aqui, junto al esquema, y no dentro de `repositorioDexie.ts`, porque
+ * `src/ui/ganchos/consultas.ts` lee `db` directamente para las consultas que
+ * el repositorio no cubre (ordenar por `orden`, contar, combinar varias
+ * tablas en un `Promise.all`) y necesita el mismo filtro sin crear una
+ * dependencia de la UI hacia la capa de repositorio.
+ */
+export function sinBorrados<T extends EntidadBase>(registros: T[]): T[] {
+  return registros.filter((r) => !r.borradoEn);
+}
+
+/** La misma regla para un registro suelto, del estilo de `Table.get`. */
+export function estaVivo<T extends EntidadBase>(registro: T | undefined): T | undefined {
+  return registro && !registro.borradoEn ? registro : undefined;
+}
 
 /**
  * Esquema IndexedDB (vía Dexie).

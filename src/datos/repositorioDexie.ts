@@ -21,7 +21,7 @@ import type {
   Vehiculo,
 } from '@/dominio/tipos.ts';
 import { ajustesPorDefecto } from './ajustesPorDefecto.ts';
-import { BaseDatosGaraje, db as dbGlobal } from './db.ts';
+import { BaseDatosGaraje, db as dbGlobal, estaVivo, sinBorrados } from './db.ts';
 import type {
   Coleccion,
   ColeccionAjustes,
@@ -49,19 +49,6 @@ function sellarNuevo<T extends EntidadBase>(datos: Nuevo<T>): T {
     borradoEn: null,
     propietarioId: null,
   } as unknown as T;
-}
-
-/**
- * Quita los registros con tombstone.
- *
- * El borrado es logico para que se pueda sincronizar (ver `borrar`), pero para
- * la interfaz un registro borrado no existe. Este filtro es el que sostiene esa
- * ilusion, y tiene que aplicarse en TODA lectura: uno que se olvide hace
- * reaparecer registros borrados, que es de los fallos mas desconcertantes que
- * puede tener una app.
- */
-function sinBorrados<T extends EntidadBase>(registros: T[]): T[] {
-  return registros.filter((r) => !r.borradoEn);
 }
 
 /**
@@ -106,8 +93,7 @@ async function marcarAdjuntosBorrados(
 function crearColeccion<T extends EntidadBase>(tabla: () => Table<T, Id>): Coleccion<T> {
   return {
     async obtener(id) {
-      const registro = await tabla().get(id);
-      return registro && !registro.borradoEn ? registro : undefined;
+      return estaVivo(await tabla().get(id));
     },
     async listar() {
       return sinBorrados(await tabla().toArray());
