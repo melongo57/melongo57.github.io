@@ -109,6 +109,14 @@ const FORMATO_LARGO = new Intl.DateTimeFormat('es-ES', {
 
 const FORMATO_MES = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
 
+const FORMATO_FECHA_HORA = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 /** '14/03/2026' */
 export function formatearFecha(fecha: FechaISO): string {
   return FORMATO_CORTO.format(deFechaISO(fecha));
@@ -117,6 +125,19 @@ export function formatearFecha(fecha: FechaISO): string {
 /** '14 de marzo de 2026' */
 export function formatearFechaLarga(fecha: FechaISO): string {
   return FORMATO_LARGO.format(deFechaISO(fecha));
+}
+
+/**
+ * '25/08/2026 · 20:30', en la hora LOCAL del dispositivo, a partir de un
+ * instante completo (`InstanteISO`, con hora y zona) — no de una fecha civil.
+ *
+ * `Intl.DateTimeFormat` ya hace la conversión de UTC a local por su cuenta;
+ * el bug de `EstadoDatos`/`Sincronizacion` no era de conversión sino de
+ * cortar el texto del ISO a mano (`slice(0, 10)`, `slice(11, 16)`), que
+ * coge los componentes en UTC tal cual, sin convertir nada.
+ */
+export function formatearFechaHora(instante: InstanteISO): string {
+  return FORMATO_FECHA_HORA.format(new Date(instante)).replace(', ', ' · ');
 }
 
 /** 'marzo de 2026' a partir de una clave 'YYYY-MM'. */

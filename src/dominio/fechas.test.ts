@@ -9,6 +9,7 @@ import {
   fechaLocalDeInstante,
   formatearDistancia,
   formatearFecha,
+  formatearFechaHora,
   mesesEntre,
   primerDiaDelMes,
   sumarDias,
@@ -63,6 +64,36 @@ describe('fechaLocalDeInstante', () => {
   it('coincide con UTC cuando no hay desfase de madrugada de por medio', () => {
     process.env.TZ = 'Europe/Madrid';
     expect(fechaLocalDeInstante('2026-07-15T10:00:00.000Z')).toBe('2026-07-15');
+  });
+});
+
+describe('formatearFechaHora', () => {
+  const zonaOriginal = process.env.TZ;
+
+  afterEach(() => {
+    process.env.TZ = zonaOriginal;
+  });
+
+  it('convierte también la hora, no solo el día', () => {
+    /*
+     * Este es el fallo de «Última sincronización»: se enseñaba cortando el
+     * texto del ISO a mano (`slice(0, 10)` para el día, `slice(11, 16)` para
+     * la hora), que son los componentes en UTC tal cual, sin convertir. Una
+     * sincronización a las 20:30 en Madrid (UTC+2, verano) se guarda como
+     * las 18:30 en UTC, y se enseñaba «18:30» en vez de «20:30».
+     */
+    process.env.TZ = 'Europe/Madrid';
+    expect(formatearFechaHora('2026-07-15T18:30:00.000Z')).toBe('15/07/2026 · 20:30');
+  });
+
+  it('también arrastra el cambio de día cuando la hora lo cruza', () => {
+    process.env.TZ = 'Europe/Madrid';
+    expect(formatearFechaHora('2026-07-15T22:30:00.000Z')).toBe('16/07/2026 · 00:30');
+  });
+
+  it('usa el desfase de invierno cuando toca', () => {
+    process.env.TZ = 'Europe/Madrid';
+    expect(formatearFechaHora('2026-01-14T23:30:00.000Z')).toBe('15/01/2026 · 00:30');
   });
 });
 

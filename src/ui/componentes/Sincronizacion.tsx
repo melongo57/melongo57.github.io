@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { sincronizacionConfigurada } from '@/datos/supabaseClient.ts';
 import { sincronizarTodo, ultimaSincronizacionLocal } from '@/datos/sincronizacion.ts';
-import { formatearFecha } from '@/dominio/fechas.ts';
+import { formatearFechaHora } from '@/dominio/fechas.ts';
 import {
   cerrarSesion,
   iniciarSesion,
@@ -194,7 +194,7 @@ export function Sincronizacion(): React.JSX.Element {
       <div className="sync__fila">
         <span className="sync__etiqueta">Última sincronización</span>
         <span className="sync__valor numero">
-          {ultima ? `${formatearFecha(ultima.slice(0, 10))} · ${ultima.slice(11, 16)}` : 'Nunca'}
+          {ultima ? formatearFechaHora(ultima) : 'Nunca'}
         </span>
       </div>
 
