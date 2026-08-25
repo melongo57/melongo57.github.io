@@ -75,8 +75,7 @@ export function Ajustes(): React.JSX.Element {
       <section className="bloque">
         <h2 className="bloque__titulo">Tus datos</h2>
         <p className="ajustes__texto">
-          Todo se guarda en este navegador y no sale de aquí. Ahora mismo hay{' '}
-          <strong className="numero">{vehiculos?.length ?? 0}</strong>{' '}
+          Ahora mismo hay <strong className="numero">{vehiculos?.length ?? 0}</strong>{' '}
           {vehiculos?.length === 1 ? 'vehículo' : 'vehículos'}.
         </p>
         <EstadoDatos />

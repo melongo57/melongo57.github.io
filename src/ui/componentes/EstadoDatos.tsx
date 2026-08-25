@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { diasEntre, formatearFecha, hoyISO } from '@/dominio/fechas.ts';
+import { diasEntre, fechaLocalDeInstante, formatearFecha, hoyISO } from '@/dominio/fechas.ts';
 import { formatearBytes } from '@/dominio/formato.ts';
 import { estadoAlmacenamiento, type EstadoAlmacenamiento } from '../almacenamiento.ts';
 import { useAjustes } from '../ganchos/consultas.ts';
@@ -25,7 +25,8 @@ export function EstadoDatos(): React.JSX.Element {
   }, []);
 
   const ultimaCopia = ajustes?.ultimaCopiaEn;
-  const diasDesdeCopia = ultimaCopia ? -diasEntre(hoyISO(), ultimaCopia.slice(0, 10)) : null;
+  const fechaUltimaCopia = ultimaCopia ? fechaLocalDeInstante(ultimaCopia) : null;
+  const diasDesdeCopia = fechaUltimaCopia ? -diasEntre(hoyISO(), fechaUltimaCopia) : null;
   const copiaVieja = diasDesdeCopia === null || diasDesdeCopia > DIAS_SIN_COPIA;
 
   return (
@@ -51,7 +52,7 @@ export function EstadoDatos(): React.JSX.Element {
         <span className="estado-datos__valor">
           {ultimaCopia ? (
             <span className={copiaVieja ? 'estado-datos__flojo' : 'estado-datos__ok'}>
-              <span className="numero">{formatearFecha(ultimaCopia.slice(0, 10))}</span>
+              <span className="numero">{formatearFecha(fechaUltimaCopia!)}</span>
               {diasDesdeCopia !== null && diasDesdeCopia > 0
                 ? ` · hace ${diasDesdeCopia} días`
                 : ' · hoy'}

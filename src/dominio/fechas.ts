@@ -40,6 +40,19 @@ export function ahoraISO(): InstanteISO {
   return new Date().toISOString();
 }
 
+/**
+ * Día civil LOCAL en el que cayó un instante (`actualizadoEn`, `ultimaCopiaEn`...).
+ *
+ * `ahoraISO()` guarda el instante en UTC (termina en «Z»); cortar los diez
+ * primeros caracteres da el día en UTC, no el de aquí. En España eso falla
+ * justo de madrugada: a la 1:30 de un día en horario de verano (UTC+2) el
+ * instante en UTC todavía marca las 23:30 del día anterior, así que una copia
+ * hecha "hoy" se enseñaría fechada "ayer".
+ */
+export function fechaLocalDeInstante(instante: InstanteISO): FechaISO {
+  return aFechaISO(new Date(instante));
+}
+
 /** Días naturales de `desde` a `hasta`. Negativo si `hasta` ya pasó. */
 export function diasEntre(desde: FechaISO, hasta: FechaISO): number {
   return differenceInCalendarDays(deFechaISO(hasta), deFechaISO(desde));

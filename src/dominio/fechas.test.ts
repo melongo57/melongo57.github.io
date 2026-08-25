@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   aFechaISO,
   claveMes,
@@ -6,6 +6,7 @@ import {
   deFechaISO,
   diasEntre,
   esFechaISO,
+  fechaLocalDeInstante,
   formatearDistancia,
   formatearFecha,
   mesesEntre,
@@ -30,6 +31,38 @@ describe('conversión ISO ↔ Date', () => {
     expect(d.getMonth()).toBe(2);
     expect(d.getDate()).toBe(14);
     expect(d.getHours()).toBe(0);
+  });
+});
+
+describe('fechaLocalDeInstante', () => {
+  const zonaOriginal = process.env.TZ;
+
+  afterEach(() => {
+    process.env.TZ = zonaOriginal;
+  });
+
+  it('usa el día de España, no el de UTC, de madrugada', () => {
+    /*
+     * `ahoraISO()` guarda el instante en UTC. En verano España va dos horas
+     * por delante (UTC+2): a las 00:30 de un 16 de julio en Madrid, el
+     * instante en UTC todavía marca las 22:30 del 15. Cortar los diez
+     * primeros caracteres del ISO (lo que hacía antes `EstadoDatos`) daba el
+     * 15, un día por detrás de lo que de verdad marcaba el reloj de España.
+     */
+    process.env.TZ = 'Europe/Madrid';
+    expect(fechaLocalDeInstante('2026-07-15T22:30:00.000Z')).toBe('2026-07-16');
+  });
+
+  it('también corrige el caso contrario, en invierno', () => {
+    // En invierno (UTC+1), las 23:30 UTC del día 14 son las 00:30 del 15 en
+    // Madrid: el mismo desfase, un día antes en vez de después.
+    process.env.TZ = 'Europe/Madrid';
+    expect(fechaLocalDeInstante('2026-01-14T23:30:00.000Z')).toBe('2026-01-15');
+  });
+
+  it('coincide con UTC cuando no hay desfase de madrugada de por medio', () => {
+    process.env.TZ = 'Europe/Madrid';
+    expect(fechaLocalDeInstante('2026-07-15T10:00:00.000Z')).toBe('2026-07-15');
   });
 });
 
