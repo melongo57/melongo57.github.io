@@ -13,6 +13,7 @@
     "iconos": "node herramientas/generar-iconos.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "date-fns": "^4.4.0",
     "dexie": "^4.4.5",
     "dexie-react-hooks": "^4.4.0",
