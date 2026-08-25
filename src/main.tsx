@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { sembrarSiHaceFalta } from '@/datos/semilla.ts';
+import { haySesionIniciada } from '@/datos/supabaseClient.ts';
 import { App } from '@/ui/App.tsx';
 import { asegurarPersistencia } from '@/ui/almacenamiento.ts';
 import { aplicarTema, temaGuardado } from '@/ui/tema.ts';
@@ -10,11 +11,23 @@ import '@/estilos/base.css';
 aplicarTema(temaGuardado());
 
 /**
- * La primera vez que se abre la app, la base está vacía y no hay nada que
- * mirar. Se cargan los datos de ejemplo para que el panel principal tenga
- * sentido desde el primer segundo; se borran desde Ajustes.
+ * Datos de ejemplo la primera vez que se abre la app: sin ellos, el panel
+ * principal no tiene nada que enseñar. Se borran desde Ajustes.
+ *
+ * PERO NO SI HAY UNA CUENTA INICIADA. Una base vacía con sesión no es una
+ * instalación nueva: son datos que están a punto de llegar del servidor.
+ * Sembrar ahí crea cuatro vehículos de ejemplo con identificadores nuevos que
+ * la sincronización sube como si fueran reales, y al bajar los de verdad te
+ * quedas con ocho — el duplicado silencioso que la importación de copias
+ * evita a propósito, colándose por la puerta de atrás.
+ *
+ * Con sesión iniciada, la app arranca vacía un instante y se llena en cuanto
+ * termina la primera sincronización, que es el comportamiento correcto en un
+ * móvil nuevo.
  */
-await sembrarSiHaceFalta(repo);
+if (!haySesionIniciada()) {
+  await sembrarSiHaceFalta(repo);
+}
 
 /*
  * Marca el almacenamiento como persistente para que el navegador no lo desaloje
