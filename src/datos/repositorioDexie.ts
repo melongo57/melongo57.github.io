@@ -1,5 +1,6 @@
 import type { Table } from 'dexie';
 import { ahoraISO } from '@/dominio/fechas.ts';
+import { programarSincronizacion } from './sincronizacion.ts';
 import { nuevoId } from '@/dominio/ids.ts';
 import { ID_AJUSTES } from '@/dominio/tipos.ts';
 import type {
@@ -50,17 +51,32 @@ function sellarNuevo<T extends EntidadBase>(datos: Nuevo<T>): T {
   } as unknown as T;
 }
 
+/**
+ * Quita los registros con tombstone.
+ *
+ * El borrado es logico para que se pueda sincronizar (ver `borrar`), pero para
+ * la interfaz un registro borrado no existe. Este filtro es el que sostiene esa
+ * ilusion, y tiene que aplicarse en TODA lectura: uno que se olvide hace
+ * reaparecer registros borrados, que es de los fallos mas desconcertantes que
+ * puede tener una app.
+ */
+function sinBorrados<T extends EntidadBase>(registros: T[]): T[] {
+  return registros.filter((r) => !r.borradoEn);
+}
+
 function crearColeccion<T extends EntidadBase>(tabla: () => Table<T, Id>): Coleccion<T> {
   return {
     async obtener(id) {
-      return tabla().get(id);
+      const registro = await tabla().get(id);
+      return registro && !registro.borradoEn ? registro : undefined;
     },
     async listar() {
-      return tabla().toArray();
+      return sinBorrados(await tabla().toArray());
     },
     async crear(datos) {
       const registro = sellarNuevo<T>(datos);
       await tabla().add(registro);
+      programarSincronizacion();
       return registro;
     },
     async actualizar(id, cambios) {
@@ -71,13 +87,36 @@ function crearColeccion<T extends EntidadBase>(tabla: () => Table<T, Id>): Colec
       }
       const actualizado = await tabla().get(id);
       if (!actualizado) throw new Error(`No existe el registro ${id}`);
+      programarSincronizacion();
       return actualizado;
     },
+    /*
+     * BORRADO LOGICO, no fisico.
+     *
+     * Se marca `borradoEn` y se deja la fila. Es lo que permite que un borrado
+     * hecho en el movil llegue al ordenador: si se borrara de verdad, no
+     * quedaria ningun rastro que dijera «esto se borro tal dia», el otro
+     * dispositivo lo volveria a subir en la siguiente sincronizacion y el
+     * borrado nunca se propagaria.
+     *
+     * Todas las consultas de lectura filtran los borrados (ver
+     * `sinBorrados`), asi que para la interfaz el registro desaparece igual.
+     * La fila se elimina de verdad al vaciar la base o al importar una copia.
+     */
     async borrar(id) {
-      await tabla().delete(id);
+      const ahora = ahoraISO();
+      const afectados = await tabla().update(id, {
+        borradoEn: ahora,
+        actualizadoEn: ahora,
+      } as never);
+      // Si no existia, no hay nada que marcar y tampoco es un error: borrar
+      // dos veces lo mismo debe ser inofensivo.
+      if (afectados === 0) return;
+      programarSincronizacion();
     },
     async contar() {
-      return tabla().count();
+      // `count()` a secas contaria tambien los tombstones.
+      return sinBorrados(await tabla().toArray()).length;
     },
   };
 }
@@ -91,14 +130,16 @@ function crearColeccionDeVehiculo<T extends ConVehiculo>(
     ...base,
     async listarPorVehiculo(vehiculoId) {
       if (!opciones.ordenarPorFecha) {
-        return tabla().where('vehiculoId').equals(vehiculoId).toArray();
+        return sinBorrados(await tabla().where('vehiculoId').equals(vehiculoId).toArray());
       }
       // El índice compuesto ya devuelve el resultado ordenado por fecha, así
       // que no hace falta ordenar en memoria.
-      return tabla()
-        .where('[vehiculoId+fecha]')
-        .between([vehiculoId, ''], [vehiculoId, '￿'])
-        .toArray();
+      return sinBorrados(
+        await tabla()
+          .where('[vehiculoId+fecha]')
+          .between([vehiculoId, ''], [vehiculoId, '￿'])
+          .toArray(),
+      );
     },
   };
 }
@@ -128,6 +169,7 @@ function crearColeccionAjustes(tabla: () => Table<Ajustes, Id>): ColeccionAjuste
         actualizadoEn: ahoraISO(),
       };
       await tabla().put(siguiente);
+      programarSincronizacion();
       return siguiente;
     },
   };
@@ -164,12 +206,20 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
     ajustes: crearColeccionAjustes(() => base.ajustes as unknown as Table<Ajustes, Id>),
 
     async puntosOdometro(vehiculoId) {
-      const [lecturas, repostajes, mantenimientos, gastos] = await Promise.all([
-        base.lecturas.where('vehiculoId').equals(vehiculoId).toArray(),
-        base.repostajes.where('vehiculoId').equals(vehiculoId).toArray(),
-        base.mantenimientos.where('vehiculoId').equals(vehiculoId).toArray(),
-        base.gastos.where('vehiculoId').equals(vehiculoId).toArray(),
-      ]);
+      // Cada uno se filtra por separado: `.map(sinBorrados)` sobre la tupla
+      // perderia los tipos, porque son cuatro entidades distintas.
+      const [lecturasTodas, repostajesTodos, mantenimientosTodos, gastosTodos] =
+        await Promise.all([
+          base.lecturas.where('vehiculoId').equals(vehiculoId).toArray(),
+          base.repostajes.where('vehiculoId').equals(vehiculoId).toArray(),
+          base.mantenimientos.where('vehiculoId').equals(vehiculoId).toArray(),
+          base.gastos.where('vehiculoId').equals(vehiculoId).toArray(),
+        ]);
+
+      const lecturas = sinBorrados(lecturasTodas);
+      const repostajes = sinBorrados(repostajesTodos);
+      const mantenimientos = sinBorrados(mantenimientosTodos);
+      const gastos = sinBorrados(gastosTodos);
 
       const puntos: PuntoOdometro[] = [];
 
