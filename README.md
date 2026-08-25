@@ -27,6 +27,9 @@ No hay servicios externos, ni claves de API, ni contenedores, ni base de datos q
 | `npm run preview` | Sirve `dist/` para probar la PWA compilada |
 | `npm run iconos` | Regenera los PNG del manifest |
 
+Para la sincronización, copia `.env.example` a `.env` con la URL y la clave publicable de tu
+proyecto de Supabase. Sin ese archivo la app arranca igual, solo que sin sincronizar.
+
 El service worker solo funciona en la versión compilada: `npm run build && npm run preview`.
 En desarrollo está desactivado a propósito, porque cachear durante el desarrollo obliga a
 pelearse con versiones viejas en cada recarga.
@@ -50,21 +53,66 @@ notificaciones; para eso, `npm run build && npm run preview` y un túnel, o desp
 | Tests | **Vitest + fake-indexeddb** | Comparte configuración con Vite. `fake-indexeddb` permite probar el repositorio de verdad, no un doble. |
 | Estilos | **CSS plano con variables** | Sin Tailwind ni CSS-in-JS. La app tiene que tener carácter propio y dos temas; un sistema de *tokens* en `:root` lo consigue con menos capas y sin coste en el bundle. |
 
-### Por qué no hay servidor ni SQLite
+### Sincronización con Supabase
+
+Los datos viven en IndexedDB **y**, si inicias sesión, también en Supabase
+(Postgres gestionado). No es un cambio de arquitectura: IndexedDB sigue siendo la
+fuente de verdad con la que trabaja la app, y la sincronización es una capa
+encima que se puede no usar. Sin `.env` configurado o sin sesión iniciada, todo
+funciona exactamente igual que antes.
+
+Eso es lo que mantiene el funcionamiento sin conexión: anotas un repostaje en un
+aparcamiento subterráneo, se guarda en local, y sube cuando hay cobertura.
+
+**La regla de fusión es «gana el más reciente», por registro y no por
+dispositivo.** Es lo que corresponde a un uso personal alternando móvil y
+ordenador: no hay dos personas editando el mismo repostaje a la vez, así que un
+`actualizadoEn` por fila basta. Un CRDT resolvería un problema que este uso no
+tiene.
+
+**El borrado es lógico, nunca físico.** Al borrar se marca `borradoEn` y la fila
+se queda; todas las lecturas filtran los tombstones, así que para la interfaz el
+registro desaparece igual. Sin ese rastro, un borrado hecho en el móvil no
+tendría forma de llegar al ordenador: el registro se volvería a subir en la
+siguiente sincronización y reaparecería solo.
+
+**Row Level Security, no un backend intermedio.** Supabase expone Postgres
+directamente al cliente y la clave publicable va embebida en el JavaScript. La
+seguridad la dan las políticas de fila: esa misma clave solo devuelve las filas
+del usuario autenticado. El esquema completo está en `supabase/schema.sql`.
+
+Tres detalles que costaron un fallo cada uno, todos con test:
+
+- **Las marcas de tiempo se comparan por instante, no como texto.** Postgres
+  devuelve `+00:00` y `toISOString()` produce `Z`; comparadas como cadenas, `Z`
+  ordena por encima de `+` y un registro recién creado ganaría siempre,
+  re-subiéndose en cada sincronización sin converger jamás.
+- **Los tombstones recibidos se guardan, no se borran.** Borrarlos dejaba a los
+  dos lados en desacuerdo permanente y el mismo borrado se «recibía» en cada
+  ronda, para siempre.
+- **Con sesión iniciada no se siembran datos de ejemplo.** Una base vacía con
+  cuenta no es una instalación nueva: son datos a punto de llegar del servidor.
+  Sembrar ahí creaba cuatro vehículos de ejemplo que la sincronización subía
+  como reales, y al bajar los de verdad quedaban ocho.
+
+### Por qué IndexedDB sigue siendo la fuente de verdad
 
 El planteamiento inicial pedía funcionamiento sin conexión con almacenamiento local **y**
 una base de datos embebida tipo SQLite. Las dos cosas a la vez significan dos copias de la
-verdad y, por tanto, un motor de sincronización con resolución de conflictos: la parte más
-cara y más frágil de todo el proyecto, existiendo para un solo usuario en un solo
-dispositivo.
+verdad y, por tanto, un motor de sincronización con resolución de conflictos. Se descartó al
+principio a propósito: era la parte más cara del proyecto y, sin varios dispositivos, no
+resolvía nada.
 
-Así que **IndexedDB es la única fuente de verdad**. Consecuencias, con lo bueno y lo malo:
+Cuando apareció el requisito de verdad —no perder los datos al cambiar de móvil o borrar el
+navegador— sí valió la pena, y se añadió encima de una app que ya funcionaba, sin tocar el
+modelo de datos. Consecuencias, con lo bueno y lo malo:
 
 - ✅ Sin conexión no es una función añadida: es el modo normal de funcionamiento.
 - ✅ Un solo comando para arrancar. Nada que administrar.
 - ✅ Los datos no salen del dispositivo.
-- ⚠️ **No hay sincronización entre móvil y ordenador.** Se pasan exportando e importando
-  JSON (fase 7).
+- ✅ Con una cuenta, los datos van también a Supabase y vuelven en cualquier dispositivo.
+- ⚠️ Sin cuenta, **no hay sincronización**: los datos viven solo en ese navegador y se pasan
+  exportando e importando JSON.
 - ⚠️ **Hay que hacer copias de seguridad.** Los datos viven en IndexedDB de este navegador.
   Conviene tener claro qué los borra y qué no:
 
