@@ -359,6 +359,8 @@ describe('eliminarVehiculo', () => {
       categoria: 'seguro',
       importeCentimos: 1000,
       descripcion: 'Seguro',
+      recurrente: false,
+      adjuntoIds: [],
     });
 
     await repo.eliminarVehiculo(v.id);
