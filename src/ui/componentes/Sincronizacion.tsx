@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { sincronizacionConfigurada } from '@/datos/supabaseClient.ts';
 import { sincronizarTodo, ultimaSincronizacionLocal } from '@/datos/sincronizacion.ts';
 import { formatearFecha } from '@/dominio/fechas.ts';
@@ -130,13 +130,12 @@ export function Sincronizacion(): React.JSX.Element {
   const [fallo, setFallo] = useState<string | null>(null);
   const [ultima, setUltima] = useState<string | null>(() => ultimaSincronizacionLocal());
 
-  // Al entrar por primera vez, una sincronización inmediata: es lo que sube lo
-  // que ya tenías en este dispositivo y baja lo que hubiera en el servidor.
-  useEffect(() => {
-    if (!sesion) return;
-    void sincronizar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sesion?.user.id]);
+  /*
+   * Aquí ya no hay sincronización al montar: la lleva `useSincronizacionAutomatica`
+   * desde la raíz de la app. Tenerla aquí significaba que solo sincronizaba
+   * quien entrara en esta pantalla. Lo que queda es el botón manual, que es el
+   * único sitio donde un fallo de red se cuenta en voz alta.
+   */
 
   async function sincronizar(): Promise<void> {
     setSincronizando(true);

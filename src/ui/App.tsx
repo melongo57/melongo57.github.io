@@ -1,4 +1,6 @@
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom';
+import { useSesion } from './autenticacion.ts';
+import { useSincronizacionAutomatica } from './ganchos/sincronizacionAutomatica.ts';
 import { Disposicion } from './layout/Disposicion.tsx';
 import { Agenda } from './paginas/Agenda.tsx';
 import { Analisis } from './paginas/Analisis.tsx';
@@ -20,6 +22,13 @@ import { Panel } from './paginas/Panel.tsx';
  * interpretaría como un identificador y acabaríamos en una ficha inexistente.
  */
 export function App(): React.JSX.Element {
+  /*
+   * La sincronización se engancha aquí y no en una pantalla concreta: colgada
+   * del bloque de cuenta de Ajustes, un dispositivo que abría la app y se
+   * quedaba en el panel no bajaba nada del servidor nunca.
+   */
+  useSincronizacionAutomatica(useSesion());
+
   return (
     <BrowserRouter>
       <Routes>
