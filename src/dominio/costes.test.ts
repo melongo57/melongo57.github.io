@@ -94,6 +94,9 @@ function entrada(cambios: Partial<EntradaCostes> = {}): EntradaCostes {
     mantenimientos: [],
     gastos: [],
     puntos: PUNTOS,
+    // Fecha fija: sin ella, estos tests empiezan a fallar solos al pasar la
+    // medianoche, porque el odómetro se extrapola un día más.
+    hoy: HOY,
     ...cambios,
   };
 }

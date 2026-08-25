@@ -39,6 +39,13 @@ export interface EntradaCostes {
   puntos: readonly HitoOdometro[];
   /** Si se omite, se toma todo el histórico. */
   periodo?: Periodo;
+  /**
+   * Fecha de referencia. Inyectable como en el resto del dominio
+   * (`vencimientos`, `calendario`, `odometro`): sin esto, cualquier test sobre
+   * costes depende del día en que se ejecuta y empieza a fallar solo al pasar
+   * la medianoche.
+   */
+  hoy?: FechaISO;
 }
 
 export interface DesgloseCostes {
@@ -68,7 +75,7 @@ function periodoCompleto(entrada: EntradaCostes): Periodo {
     ...entrada.gastos.map((g) => g.fecha),
   ];
 
-  const hoy = hoyISO();
+  const hoy = entrada.hoy ?? hoyISO();
   if (fechas.length === 0) {
     return { desde: entrada.vehiculo.fechaCompra ?? hoy, hasta: hoy };
   }
@@ -161,7 +168,8 @@ export function calcularCosteTotalPropiedad(entrada: EntradaCostes): CosteTotalP
   const costeRealCentimos = compraCentimos + desglose.totalCentimos - recuperadoCentimos;
 
   const desde = vehiculo.fechaCompra ?? desglose.periodo.desde;
-  const hasta = vehiculo.estado === 'vendido' ? (vehiculo.fechaVenta ?? hoyISO()) : hoyISO();
+  const hoy = entrada.hoy ?? hoyISO();
+  const hasta = vehiculo.estado === 'vendido' ? (vehiculo.fechaVenta ?? hoy) : hoy;
   const meses = Math.max(1, mesesEntre(desde, hasta));
 
   // Los kilómetros de propiedad van de la compra a hoy, no del primer registro.
