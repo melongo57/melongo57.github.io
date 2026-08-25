@@ -7,3 +7,6 @@ dev-dist/
 .env.*
 !.env.example
 coverage/
+
+# Local Netlify folder
+.netlify

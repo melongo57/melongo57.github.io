@@ -45,6 +45,22 @@ export default defineConfig({
     // silencio y dejarte mirando una pestaña que no carga.
     strictPort: true,
   },
+  preview: {
+    /*
+     * `npm run preview` sirve el build de verdad (con service worker), que es
+     * lo que hay que probar desde fuera de casa a traves de un tunel.
+     */
+    host: true,
+    port: 4173,
+    strictPort: true,
+    /*
+     * Un tunel llega con una cabecera `Host` que no es `localhost` (por
+     * ejemplo `algo.trycloudflare.com`). Vite la rechazaria con «Blocked
+     * request» y solo se veria una pagina en blanco. Esto solo afecta al
+     * servidor de pruebas local, nunca al build publicado.
+     */
+    allowedHosts: true,
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
