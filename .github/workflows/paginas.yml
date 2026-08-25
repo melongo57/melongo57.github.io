@@ -30,6 +30,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pages tiene dos modos y solo uno sirve aqui. En modo «rama» publica la
+      # raiz del repositorio tal cual, y ahi el index.html es el de desarrollo:
+      # apunta a /src/main.tsx, que en produccion no existe. El resultado es una
+      # pagina en blanco. Peor aun, el publicador clasico se dispara en cada
+      # push a la vez que este workflow, asi que el sitio quedaba a merced de
+      # cual de los dos terminara ultimo.
+      #
+      # Esto lo fija en modo «workflow» de forma explicita. `configure-pages`
+      # con `enablement` solo cubre el alta inicial, no reconvierte un
+      # repositorio que ya quedo en modo rama. Es idempotente.
+      - name: Servir Pages desde Actions, no desde la rama
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
