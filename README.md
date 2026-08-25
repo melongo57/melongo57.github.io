@@ -436,7 +436,7 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-333 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+364 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
 vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
@@ -459,10 +459,71 @@ Otros dos fallos reales que salieron al usar la app y que ahora tienen test:
   «borrar todo» o de una importación.
 - **Las reglas sin registro previo se anunciaban como vencidas hace años**, lo que llenaba
   el panel de rojos falsos y ahogaba el único aviso real.
+- **Borrar no borraba.** El borrado de un registro suelto ya era lógico, pero borrar un
+  vehículo entero y «borrar todo» seguían eliminando las filas de verdad. Sin rastro, la
+  sincronización no distingue «esto se borró aquí» de «esto todavía no ha llegado a este
+  dispositivo»: interpreta lo segundo y se lo baja del servidor otra vez. Reproducido en
+  producción — el garaje reaparecía entero a los pocos segundos. Los tests que había no lo
+  veían porque comprobaban con `contar()`, que **filtra los borrados**: daban verde igual
+  con las filas eliminadas que con las marcadas. Los nuevos miran la tabla en crudo.
 
 ```bash
 npm test
 ```
+
+## Despliegue
+
+La app se publica en <https://melongo57.github.io> desde el repositorio
+`melongo57/melongo57.github.io`. Cada push a `main` dispara
+[`.github/workflows/paginas.yml`](.github/workflows/paginas.yml), que pasa los tests,
+construye y publica. Las pruebas corren **antes** de construir a propósito: publicar
+números de consumo o de vencimientos calculados con la lógica rota es peor que no publicar
+nada, porque son números sobre los que luego se decide si toca revisión.
+
+### El ajuste que hay que tener bien
+
+En **Settings → Pages → Source** tiene que estar **«GitHub Actions»**.
+
+Con «Deploy from a branch», GitHub publica la raíz del repositorio tal cual e ignora lo que
+suba el workflow. Y la raíz contiene el `index.html` de desarrollo, que apunta a
+`/src/main.tsx` — un fichero que en el sitio construido no existe. El resultado es una
+página en blanco. Peor todavía: en ese modo GitHub lanza además su propio publicador en
+cada push, así que el sitio queda a merced de cuál de los dos termine último y puede
+funcionar un día y romperse al siguiente sin que haya cambiado nada.
+
+No se puede automatizar. La API que cambia ese ajuste exige permiso de administración del
+repositorio, y ese permiso no se le puede conceder al token de un workflow: `pages: write`
+no llega. `configure-pages` con `enablement: true` cubre el alta inicial, pero no
+reconvierte un repositorio que ya quedó en modo rama.
+
+### Página de usuario, no de proyecto
+
+El repositorio se llama `melongo57.github.io` —una *página de usuario*, que se sirve en la
+raíz del dominio— y no `mi-garaje`, que se serviría bajo `/mi-garaje/`. Así no hay que
+tocar `base`, ni el `scope` del manifest, ni el `navigateFallback` del service worker, ni
+el basename del router: todo sigue asumiendo `/`. De regalo, el mismo build sirve tal cual
+en cualquier otro alojamiento que publique en la raíz.
+
+### El 404 que en realidad es la app
+
+GitHub Pages sirve ficheros estáticos y no sabe nada de rutas de cliente: al pedir
+`/agenda` busca un fichero con ese nombre y devuelve su página de error. Por eso el build
+copia `index.html` a `404.html` (ver el plugin `pagina-404-spa` en
+[`vite.config.ts`](vite.config.ts)). La app arranca igual y React Router lee la ruta de
+`location.pathname`. Es el equivalente al redirect `/* -> /index.html` que ya existía en
+[`netlify.toml`](netlify.toml).
+
+El `navigateFallback` del service worker **no** cubre este caso: solo actúa cuando el
+service worker ya está instalado, y la primera visita a un enlace compartido llega antes de
+que exista.
+
+### Las claves de Supabase van en claro
+
+La URL y la clave *publishable* están escritas en el workflow, y no es un descuido: esa
+clave está pensada para vivir en el cliente y acaba dentro del bundle que descarga
+cualquiera que abra la web. Esconderla no protegería nada. Quien protege los datos es Row
+Level Security, que solo deja ver a cada usuario sus propias filas. La clave `service_role`
+—que se salta RLS por completo— no puede aparecer ahí jamás.
 
 ## Plan de trabajo
 
