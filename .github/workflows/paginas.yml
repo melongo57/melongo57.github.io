@@ -1,0 +1,79 @@
+# Publica la app en GitHub Pages en cada push a `main`.
+#
+# Se construye AQUI en vez de subir la carpeta `dist` al repositorio a
+# proposito: `dist` es un artefacto, y tenerlo versionado obliga a acordarse
+# de reconstruirlo a mano en cada cambio. Si alguna vez se olvida, lo
+# publicado deja de corresponder con el codigo y no hay forma de notarlo.
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Para poder relanzar la publicacion desde la web sin tocar el codigo.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si se empujan dos commits seguidos, que no se pisen dos despliegues a la vez.
+# `cancel-in-progress: false` porque cancelar un despliegue a medias puede
+# dejar Pages en un estado raro; mejor encolar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Las pruebas antes de construir: si la logica de consumo o de
+      # vencimientos esta rota, es mejor no publicar nada que publicar numeros
+      # equivocados sobre los que luego se toman decisiones de mantenimiento.
+      - name: Pruebas
+        run: npm test
+
+      - name: Construir
+        run: npm run build
+        env:
+          # Estas dos NO son secretos. La clave «publishable» de Supabase esta
+          # pensada para vivir en el cliente: acaba dentro del JavaScript que
+          # descarga cualquiera que abra la web, asi que esconderla aqui no
+          # protegeria nada. Quien protege los datos es Row Level Security, que
+          # solo deja ver a cada usuario sus propias filas.
+          #
+          # LA QUE NO PUEDE APARECER NUNCA AQUI es la `service_role`: esa se
+          # salta RLS por completo. Si algun dia hace falta, va como secreto del
+          # repositorio y solo en codigo de servidor.
+          VITE_SUPABASE_URL: https://hnaaogdvjfxulyxtlinb.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_u4Q5MQB-CMV4ObaWIaxf_A_-s4NHKax
+
+      # `enablement: true` activa Pages en el repositorio la primera vez, para
+      # no depender de acordarse de marcarlo a mano en los ajustes.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
