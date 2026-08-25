@@ -6,6 +6,7 @@ import { AvisoNotificaciones } from '../componentes/AvisoNotificaciones.tsx';
 import { Boton } from '../componentes/Boton.tsx';
 import { CopiaSeguridad } from '../componentes/CopiaSeguridad.tsx';
 import { EstadoDatos } from '../componentes/EstadoDatos.tsx';
+import { Sincronizacion } from '../componentes/Sincronizacion.tsx';
 import { EstadoInstalacion } from '../componentes/EstadoInstalacion.tsx';
 import { CampoSelector } from '../componentes/Campo.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
@@ -64,6 +65,11 @@ export function Ajustes(): React.JSX.Element {
       <section className="bloque">
         <h2 className="bloque__titulo">Avisos</h2>
         <AvisoNotificaciones />
+      </section>
+
+      <section className="bloque">
+        <h2 className="bloque__titulo">Cuenta y sincronización</h2>
+        <Sincronizacion />
       </section>
 
       <section className="bloque">
