@@ -67,7 +67,15 @@ export interface Repositorio {
   /** Borra el vehículo y, en cascada, todo lo que cuelga de él. */
   eliminarVehiculo(vehiculoId: Id): Promise<void>;
 
-  /** Vacía todas las tablas. Lo usa la importación de un JSON completo. */
+  /**
+   * Marca como borrado TODO el contenido del garaje. Lo usan el «borrar todo»
+   * de Ajustes y la importación de un JSON completo.
+   *
+   * No vacía las tablas de verdad: un borrado sin rastro no se puede
+   * sincronizar, porque el otro extremo no distingue «esto se borró» de «esto
+   * todavía no ha llegado» y lo devuelve. Los ajustes sí se vacían, que son
+   * preferencias y se sincronizan aparte.
+   */
   vaciar(): Promise<void>;
 
   /**

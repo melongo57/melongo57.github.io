@@ -1,4 +1,4 @@
-import type { Table } from 'dexie';
+import type { EntityTable, Table } from 'dexie';
 import { ahoraISO } from '@/dominio/fechas.ts';
 import { programarSincronizacion } from './sincronizacion.ts';
 import { nuevoId } from '@/dominio/ids.ts';
@@ -62,6 +62,45 @@ function sellarNuevo<T extends EntidadBase>(datos: Nuevo<T>): T {
  */
 function sinBorrados<T extends EntidadBase>(registros: T[]): T[] {
   return registros.filter((r) => !r.borradoEn);
+}
+
+/**
+ * Marca registros como borrados en vez de eliminarlos de la tabla.
+ *
+ * Un `delete()` no deja rastro, y sin rastro la sincronizacion no tiene forma
+ * de distinguir «esto se borro aqui» de «esto todavia no ha llegado a este
+ * dispositivo». Interpreta lo segundo y se lo baja del servidor otra vez: el
+ * registro reaparece solo a los pocos segundos. Es el mismo motivo por el que
+ * `borrar` es logico, aplicado a los borrados en bloque.
+ */
+async function marcarBorrados<T extends EntidadBase>(
+  tabla: EntityTable<T, 'id'>,
+  registros: readonly T[],
+  ahora: string,
+): Promise<void> {
+  const vivos = registros.filter((r) => !r.borradoEn);
+  if (vivos.length === 0) return;
+  await tabla.bulkPut(vivos.map((r) => ({ ...r, borradoEn: ahora, actualizadoEn: ahora })));
+}
+
+/**
+ * Lo mismo para los adjuntos, pero tirando el Blob.
+ *
+ * Conservar la fila es lo que propaga el borrado; conservar ademas la foto
+ * serian megabytes ocupando la cuota del navegador para siempre sin que nada
+ * los vuelva a mostrar. La sincronizacion ya guarda asi los adjuntos borrados
+ * que llegan del servidor, asi que el formato no es nuevo.
+ */
+async function marcarAdjuntosBorrados(
+  tabla: EntityTable<Adjunto, 'id'>,
+  adjuntos: readonly Adjunto[],
+  ahora: string,
+): Promise<void> {
+  const vivos = adjuntos.filter((a) => !a.borradoEn);
+  if (vivos.length === 0) return;
+  await tabla.bulkPut(
+    vivos.map((a) => ({ ...a, borradoEn: ahora, actualizadoEn: ahora, datos: new Blob([]) })),
+  );
 }
 
 function crearColeccion<T extends EntidadBase>(tabla: () => Table<T, Id>): Coleccion<T> {
@@ -247,6 +286,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
     },
 
     async eliminarVehiculo(vehiculoId) {
+      const ahora = ahoraISO();
       await base.transaction(
         'rw',
         [
@@ -262,41 +302,92 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
         async () => {
           const vehiculo = await base.vehiculos.get(vehiculoId);
 
-          const [mantenimientos, repostajes, gastos, documentos] = await Promise.all([
-            base.mantenimientos.where('vehiculoId').equals(vehiculoId).toArray(),
-            base.repostajes.where('vehiculoId').equals(vehiculoId).toArray(),
-            base.gastos.where('vehiculoId').equals(vehiculoId).toArray(),
-            base.documentos.where('vehiculoId').equals(vehiculoId).toArray(),
-          ]);
+          const [lecturas, mantenimientos, reglas, repostajes, gastos, documentos] =
+            await Promise.all([
+              base.lecturas.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.mantenimientos.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.reglas.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.repostajes.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.gastos.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.documentos.where('vehiculoId').equals(vehiculoId).toArray(),
+            ]);
 
           // Los adjuntos viven en su propia tabla: si no se limpian aquí,
-          // quedan megabytes huérfanos ocupando la cuota del navegador.
-          const adjuntos = new Set<Id>([
+          // quedan megabytes huérfanos ocupando la cuota del navegador. Se
+          // marcan igual que el resto, pero sin el Blob.
+          const idsAdjuntos = new Set<Id>([
             ...idsDeAdjuntos(mantenimientos),
             ...idsDeAdjuntos(repostajes),
             ...idsDeAdjuntos(gastos),
             ...idsDeAdjuntos(documentos),
           ]);
-          if (vehiculo?.fotoAdjuntoId) adjuntos.add(vehiculo.fotoAdjuntoId);
+          if (vehiculo?.fotoAdjuntoId) idsAdjuntos.add(vehiculo.fotoAdjuntoId);
+          const adjuntos = (await base.adjuntos.bulkGet([...idsAdjuntos])).filter(
+            (a): a is Adjunto => a !== undefined,
+          );
 
           await Promise.all([
-            base.lecturas.where('vehiculoId').equals(vehiculoId).delete(),
-            base.mantenimientos.where('vehiculoId').equals(vehiculoId).delete(),
-            base.reglas.where('vehiculoId').equals(vehiculoId).delete(),
-            base.repostajes.where('vehiculoId').equals(vehiculoId).delete(),
-            base.gastos.where('vehiculoId').equals(vehiculoId).delete(),
-            base.documentos.where('vehiculoId').equals(vehiculoId).delete(),
-            base.adjuntos.bulkDelete([...adjuntos]),
-            base.vehiculos.delete(vehiculoId),
+            marcarBorrados(base.lecturas, lecturas, ahora),
+            marcarBorrados(base.mantenimientos, mantenimientos, ahora),
+            marcarBorrados(base.reglas, reglas, ahora),
+            marcarBorrados(base.repostajes, repostajes, ahora),
+            marcarBorrados(base.gastos, gastos, ahora),
+            marcarBorrados(base.documentos, documentos, ahora),
+            marcarAdjuntosBorrados(base.adjuntos, adjuntos, ahora),
+            marcarBorrados(base.vehiculos, vehiculo ? [vehiculo] : [], ahora),
           ]);
         },
       );
+      programarSincronizacion();
     },
 
+    /*
+     * «Borrar todo» tambien deja marcas, por el mismo motivo que el borrado de
+     * un registro suelto: vaciar las tablas de verdad hace que la siguiente
+     * sincronizacion vea el dispositivo vacio y el servidor lleno, concluya
+     * que el servidor va por delante y se lo baje entero. Para quien lo pulsa,
+     * el garaje se queda limpio y reaparece a los pocos segundos.
+     *
+     * `ajustes` es la excepcion y se vacia de verdad: es una fila unica de
+     * preferencias que la sincronizacion trata aparte y expresamente sin
+     * tombstones (ver `sincronizarAjustes`).
+     */
     async vaciar() {
+      const ahora = ahoraISO();
       await base.transaction('rw', base.tables, async () => {
-        await Promise.all(base.tables.map((t) => t.clear()));
+        const [
+          vehiculos,
+          lecturas,
+          mantenimientos,
+          reglas,
+          repostajes,
+          gastos,
+          documentos,
+          adjuntos,
+        ] = await Promise.all([
+          base.vehiculos.toArray(),
+          base.lecturas.toArray(),
+          base.mantenimientos.toArray(),
+          base.reglas.toArray(),
+          base.repostajes.toArray(),
+          base.gastos.toArray(),
+          base.documentos.toArray(),
+          base.adjuntos.toArray(),
+        ]);
+
+        await Promise.all([
+          marcarBorrados(base.vehiculos, vehiculos, ahora),
+          marcarBorrados(base.lecturas, lecturas, ahora),
+          marcarBorrados(base.mantenimientos, mantenimientos, ahora),
+          marcarBorrados(base.reglas, reglas, ahora),
+          marcarBorrados(base.repostajes, repostajes, ahora),
+          marcarBorrados(base.gastos, gastos, ahora),
+          marcarBorrados(base.documentos, documentos, ahora),
+          marcarAdjuntosBorrados(base.adjuntos, adjuntos, ahora),
+          base.ajustes.clear(),
+        ]);
       });
+      programarSincronizacion();
     },
 
     async leerTabla(nombre) {

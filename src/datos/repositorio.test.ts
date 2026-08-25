@@ -280,6 +280,109 @@ describe('vaciar', () => {
     expect(await repo.vehiculos.contar()).toBe(0);
     expect(await repo.lecturas.contar()).toBe(0);
   });
+
+  it('deja marca de borrado en vez de eliminar las filas', async () => {
+    /*
+     * Este es EL test del fallo: vaciar las tablas de verdad deja el
+     * dispositivo sin nada que decir. La siguiente sincronización ve el móvil
+     * vacío y el servidor lleno, decide que el servidor va por delante y se lo
+     * baja entero — el garaje reaparece a los pocos segundos de haber pulsado
+     * «borrar todo». Comprobar `contar()` no basta para verlo, porque filtra
+     * los borrados: hay que mirar la tabla en crudo.
+     */
+    const v = await crearVehiculo();
+    await repo.lecturas.crear({ vehiculoId: v.id, fecha: '2026-01-01', km: 1, origen: 'manual' });
+
+    await repo.vaciar();
+
+    const vehiculos = await base.vehiculos.toArray();
+    const lecturas = await base.lecturas.toArray();
+    expect(vehiculos).toHaveLength(1);
+    expect(lecturas).toHaveLength(1);
+    expect(vehiculos[0]!.borradoEn).not.toBeNull();
+    // La marca tiene que viajar con `actualizadoEn`, o el servidor seguiría
+    // creyendo que su copia es la más reciente y ganaría igualmente.
+    expect(vehiculos[0]!.actualizadoEn).toBe(vehiculos[0]!.borradoEn);
+    expect(lecturas[0]!.borradoEn).not.toBeNull();
+  });
+
+  it('conserva la ficha del adjunto en vez de borrarla', async () => {
+    /*
+     * Borrar la fila entera impediría que el borrado llegara a los demás
+     * dispositivos, igual que con cualquier otro registro. Lo que sí se suelta
+     * es el Blob: guardar las fotos para siempre llenaría la cuota del
+     * navegador con megabytes que ya no mira nadie.
+     *
+     * Que el Blob se suelte NO se comprueba aquí: `fake-indexeddb` no conserva
+     * los Blob (los reduce a un objeto vacío en cuanto se guardan), así que
+     * cualquier aserción sobre su tamaño pasaría o fallaría por el motivo
+     * equivocado. Lo comprobable en este entorno es que la ficha sobrevive.
+     */
+    const adjunto = await repo.adjuntos.crear({
+      nombre: 'foto.jpg',
+      mime: 'image/jpeg',
+      bytes: 4,
+      datos: new Blob(['1234']),
+    });
+
+    await repo.vaciar();
+
+    const guardado = await base.adjuntos.get(adjunto.id);
+    expect(guardado).toBeDefined();
+    expect(guardado!.borradoEn).not.toBeNull();
+    // Los metadatos siguen: son los que permiten explicar qué se borró.
+    expect(guardado!.nombre).toBe('foto.jpg');
+    expect(await repo.adjuntos.contar()).toBe(0);
+  });
+
+  it('los ajustes sí se vacían de verdad', async () => {
+    // Son preferencias, no datos del garaje, y la sincronización los trata
+    // aparte con una fila única sin tombstones.
+    await repo.ajustes.guardar({ tema: 'oscuro' });
+    await repo.vaciar();
+    expect(await base.ajustes.count()).toBe(0);
+  });
+});
+
+describe('eliminarVehiculo', () => {
+  it('marca el vehículo y todo lo que cuelga de él, sin borrar filas', async () => {
+    /*
+     * Mismo fallo que en `vaciar`, y en la acción más habitual de todas: si al
+     * borrar un vehículo desaparecieran las filas, el vehículo volvería del
+     * servidor en la siguiente sincronización con todos sus repostajes.
+     */
+    const v = await crearVehiculo();
+    await repo.lecturas.crear({ vehiculoId: v.id, fecha: '2026-01-01', km: 1, origen: 'manual' });
+    await repo.gastos.crear({
+      vehiculoId: v.id,
+      fecha: '2026-01-02',
+      categoria: 'seguro',
+      importeCentimos: 1000,
+      descripcion: 'Seguro',
+    });
+
+    await repo.eliminarVehiculo(v.id);
+
+    // Para la interfaz ya no existe.
+    expect(await repo.vehiculos.contar()).toBe(0);
+    expect(await repo.gastos.listarPorVehiculo(v.id)).toHaveLength(0);
+
+    // Pero queda el rastro que la sincronización necesita.
+    expect((await base.vehiculos.get(v.id))!.borradoEn).not.toBeNull();
+    expect((await base.lecturas.toArray())[0]!.borradoEn).not.toBeNull();
+    expect((await base.gastos.toArray())[0]!.borradoEn).not.toBeNull();
+  });
+
+  it('no toca los registros de otro vehículo', async () => {
+    const v1 = await crearVehiculo('Uno');
+    const v2 = await crearVehiculo('Dos');
+    await repo.lecturas.crear({ vehiculoId: v2.id, fecha: '2026-01-01', km: 1, origen: 'manual' });
+
+    await repo.eliminarVehiculo(v1.id);
+
+    expect(await repo.vehiculos.contar()).toBe(1);
+    expect(await repo.lecturas.listarPorVehiculo(v2.id)).toHaveLength(1);
+  });
 });
 
 describe('ajustes: leer nunca escribe', () => {
