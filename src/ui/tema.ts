@@ -12,8 +12,8 @@ import type { Tema } from '@/dominio/tipos.ts';
 export const CLAVE_TEMA = 'mi-garaje:tema';
 
 const COLOR_BARRA: Record<'claro' | 'oscuro', string> = {
-  claro: '#f7f5f2',
-  oscuro: '#131211',
+  claro: '#f5f7f6',
+  oscuro: '#0f1414',
 };
 
 function prefiereOscuro(): boolean {

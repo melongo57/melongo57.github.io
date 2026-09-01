@@ -2,35 +2,37 @@
  * Sistema de diseño de Mi Garaje.
  *
  * Paleta pensada para leerse en un móvil, al sol, en una gasolinera:
- *  - Neutros CÁLIDOS, no grises azulados. Dan carácter sin hacer ruido.
- *  - Acento índigo. Deliberadamente fuera del rojo/ámbar/verde para que el
- *    color de marca no compita nunca con el semáforo de vencimientos.
+ *  - Neutros FRÍOS (antes eran cálidos): un verde-azulado apagado, no gris
+ *    puro. Acompaña al acento sin competir con él.
+ *  - Acento azul petróleo. Deliberadamente fuera del rojo/ámbar/verde para
+ *    que el color de marca no compita nunca con el semáforo de vencimientos.
  *  - Contrastes por encima de AA en ambos temas: en exterior no hay margen.
+ *    Comprobado con la fórmula de contraste relativo de WCAG, no a ojo.
  */
 
 :root {
   color-scheme: light;
 
-  /* --- Neutros cálidos --- */
-  --c-fondo: #f7f5f2;
+  /* --- Neutros fríos --- */
+  --c-fondo: #f5f7f6;
   --c-superficie: #ffffff;
-  --c-superficie-2: #f1eeea;
-  --c-superficie-3: #e7e3dd;
-  --c-borde: #ded9d2;
-  --c-borde-fuerte: #c5bfb6;
+  --c-superficie-2: #e9eeed;
+  --c-superficie-3: #dbe4e2;
+  --c-borde: #cbd7d4;
+  --c-borde-fuerte: #a7bab6;
 
-  --c-texto: #1a1815;
-  --c-texto-suave: #5c564e;
-  --c-texto-tenue: #78716a;
+  --c-texto: #151f1f;
+  --c-texto-suave: #4b5c5c;
+  --c-texto-tenue: #5d6d6c;
 
   /* --- Acento --- */
-  --c-acento: #4f3fd6;
-  --c-acento-fuerte: #3f31b0;
-  --c-acento-suave: #eceaff;
-  --c-acento-borde: #c9c2ff;
+  --c-acento: #0d6178;
+  --c-acento-fuerte: #094a5c;
+  --c-acento-suave: #dcedf1;
+  --c-acento-borde: #b7dbe3;
   --c-sobre-acento: #ffffff;
 
-  /* --- Semáforo de vencimientos --- */
+  /* --- Semáforo de vencimientos: no cambia con el acento, es información --- */
   --c-ok: #157347;
   --c-ok-fondo: #e3f4ea;
   --c-ok-borde: #a9dcbf;
@@ -43,18 +45,24 @@
   --c-alerta-fondo: #fdeceb;
   --c-alerta-borde: #f3b6b2;
 
-  /* --- Series de gráficas (fase 6). Distinguibles con deuteranopia. --- */
-  --c-serie-1: #4f3fd6;
-  --c-serie-2: #0e7c86;
-  --c-serie-3: #c2410c;
-  --c-serie-4: #7c3aed;
-  --c-serie-5: #a16207;
-  --c-serie-6: #be185d;
+  /*
+   * --- Series de gráficas. Distinguibles con deuteranopia. ---
+   * La 1 sigue anclada al acento (es la de "Combustible", la categoría que
+   * más se mira). La 2 ya no puede ser el verde azulado de antes: se
+   * confundiría con el acento nuevo, que ahora vive justo en esa zona del
+   * espectro.
+   */
+  --c-serie-1: #0d6178;
+  --c-serie-2: #c2410c;
+  --c-serie-3: #7c3aed;
+  --c-serie-4: #a16207;
+  --c-serie-5: #be185d;
+  --c-serie-6: #4d7c3f;
 
   /* --- Sombras: muy sutiles, la jerarquía la marca el borde --- */
-  --sombra-1: 0 1px 2px rgba(26, 24, 21, 0.06);
-  --sombra-2: 0 2px 8px rgba(26, 24, 21, 0.08);
-  --sombra-3: 0 8px 28px rgba(26, 24, 21, 0.12);
+  --sombra-1: 0 1px 2px rgba(15, 23, 23, 0.07);
+  --sombra-2: 0 2px 8px rgba(15, 23, 23, 0.09);
+  --sombra-3: 0 8px 28px rgba(15, 23, 23, 0.14);
 
   /* --- Tipografía --- */
   --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -65,25 +73,31 @@
   --t-base: 0.9375rem;
   --t-md: 1.0625rem;
   --t-lg: 1.3125rem;
-  --t-xl: 1.75rem;
-  --t-2xl: 2.375rem;
-  --t-3xl: 3rem;
+  --t-xl: 1.875rem;
+  --t-2xl: 2.625rem;
+  --t-3xl: 3.25rem;
 
-  /* --- Espaciado: escala de 4 px --- */
+  /*
+   * --- Espaciado: escala de 4 px, un paso más suelta a partir de e-4 ---
+   * e-1..e-3 se quedan igual a propósito: son el espaciado FINO (relleno de
+   * iconos, huecos entre una etiqueta y su valor), y no era ahí donde se
+   * notaba apretado. e-4 en adelante es el espaciado ESTRUCTURAL —entre
+   * tarjetas, dentro de una tarjeta, entre secciones— y es lo que se afloja.
+   */
   --e-1: 0.25rem;
   --e-2: 0.5rem;
   --e-3: 0.75rem;
-  --e-4: 1rem;
-  --e-5: 1.5rem;
-  --e-6: 2rem;
+  --e-4: 1.125rem;
+  --e-5: 1.75rem;
+  --e-6: 2.25rem;
   --e-7: 3rem;
   --e-8: 4rem;
 
   /* --- Radios: generosos, la app se toca con el pulgar --- */
   --r-sm: 8px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 28px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
   --r-full: 999px;
 
   /*
@@ -104,22 +118,22 @@
 :root[data-tema='oscuro'] {
   color-scheme: dark;
 
-  --c-fondo: #131211;
-  --c-superficie: #1c1a18;
-  --c-superficie-2: #252220;
-  --c-superficie-3: #302c29;
-  --c-borde: #35312d;
-  --c-borde-fuerte: #4d4741;
+  --c-fondo: #0f1414;
+  --c-superficie: #181f1f;
+  --c-superficie-2: #212a2a;
+  --c-superficie-3: #2a3535;
+  --c-borde: #334040;
+  --c-borde-fuerte: #46605c;
 
-  --c-texto: #f6f3ef;
-  --c-texto-suave: #b5aea5;
-  --c-texto-tenue: #9a9289;
+  --c-texto: #e9f2f1;
+  --c-texto-suave: #aec0be;
+  --c-texto-tenue: #8ea19f;
 
-  --c-acento: #9d92ff;
-  --c-acento-fuerte: #b3aaff;
-  --c-acento-suave: #211d3d;
-  --c-acento-borde: #3a3272;
-  --c-sobre-acento: #16132e;
+  --c-acento: #5fd3ec;
+  --c-acento-fuerte: #85e0f2;
+  --c-acento-suave: #123640;
+  --c-acento-borde: #1f4f5c;
+  --c-sobre-acento: #04181d;
 
   --c-ok: #56d68d;
   --c-ok-fondo: #12281c;
@@ -133,12 +147,12 @@
   --c-alerta-fondo: #2e1614;
   --c-alerta-borde: #5c2823;
 
-  --c-serie-1: #9d92ff;
-  --c-serie-2: #4ecdc4;
-  --c-serie-3: #ff9f5a;
-  --c-serie-4: #c4a6ff;
-  --c-serie-5: #e3c04a;
-  --c-serie-6: #ff8fb8;
+  --c-serie-1: #5fd3ec;
+  --c-serie-2: #ff9f5a;
+  --c-serie-3: #c4a6ff;
+  --c-serie-4: #e3c04a;
+  --c-serie-5: #ff8fb8;
+  --c-serie-6: #94c47a;
 
   --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --sombra-2: 0 2px 10px rgba(0, 0, 0, 0.45);

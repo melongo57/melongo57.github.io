@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DESTINO = join(RAIZ, 'public', 'icons');
 
-const FONDO = [0x4f, 0x3f, 0xd6]; // --c-acento
+const FONDO = [0x0d, 0x61, 0x78]; // --c-acento
 const TINTA = [0xff, 0xff, 0xff];
 
 // ---------------------------------------------------------------------------
