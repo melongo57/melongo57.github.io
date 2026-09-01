@@ -29,8 +29,18 @@
   width: 132px;
   aspect-ratio: 16 / 11;
   border-radius: var(--r-md);
-  object-fit: cover;
   flex-shrink: 0;
+}
+
+/*
+ * `contain`, no `cover`: una foto real rara vez viene en 16:11, y recortarla
+ * para rellenar el recuadro se come justo lo que el usuario quería enseñar.
+ * El fondo detrás asoma como marco en las que no encajan justas.
+ */
+.foto-selector__vista {
+  object-fit: contain;
+  background: var(--c-superficie-2);
+  border: 1px solid var(--c-borde);
 }
 
 .foto-selector__hueco {

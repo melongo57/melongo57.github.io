@@ -24,10 +24,30 @@
   background: color-mix(in srgb, var(--tinte) 22%, transparent);
 }
 
+/*
+ * `contain`, no `cover`: el recuadro es panorámico (16:7) para que la
+ * silueta dibujada encaje bien, pero una foto de verdad casi nunca viene en
+ * ese formato — la mayoría son más cuadradas o verticales. Con `cover` esa
+ * diferencia de proporción se traduce en recortar la foto por los lados o por
+ * arriba y abajo, perdiendo justo lo que el usuario quería enseñar (el techo,
+ * la matrícula...). Con `contain` se ve la foto entera siempre, aunque deje
+ * el degradado de fondo asomando a los lados en las que no son panorámicas.
+ *
+ * `position: absolute; inset: 0` en vez de `width/height: 100%` a secas: el
+ * contenedor es un `grid` con `place-items: end center` para poder anclar la
+ * silueta dibujada abajo. Con una imagen de reemplazo (`<img>`) de ese
+ * `grid`, el porcentaje de alto no siempre resuelve contra el área de la
+ * rejilla y el navegador acaba dimensionando la caja por la relación de
+ * aspecto INTRÍNSECA de la foto en vez de por el recuadro — la imagen se
+ * salía del recuadro entero. Sacándola del flujo con `absolute` no depende
+ * de esa resolución de porcentajes: siempre ocupa exactamente el recuadro.
+ */
 .foto-vehiculo__imagen {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* La imagen real tapa la franja de suelo. */
