@@ -158,8 +158,8 @@ no a 75 caracteres** —cada vocal acentuada ocupa dos bytes en UTF-8— sin par
 carácter multibyte, y `DTEND` exclusivo en los eventos de día completo.
 
 Al calendario solo van los vencimientos **con fecha**. Un mantenimiento que vence a los
-140.000 km no se puede poner en una agenda: nadie sabe qué día llegarás. Y tampoco va lo que
-no se ha registrado nunca, que llenaría el calendario de citas inventadas.
+140.000 km no se puede poner en una agenda: nadie sabe qué día llegarás. Y tampoco van las
+alertas a las que les falta la última vez, que llenarían el calendario de citas inventadas.
 
 ### Sobre el tipado
 
@@ -202,7 +202,7 @@ src/
 │   └── semilla.ts          Datos de ejemplo
 ├── ui/          React.
 │   ├── layout/        Armazón y navegación
-│   ├── paginas/       Panel, ficha, mantenimientos, repostajes, gastos, reglas
+│   ├── paginas/       Panel, ficha, servicios, repostajes, gastos, agenda
 │   ├── componentes/   Campos, botones, hoja modal
 │   └── ganchos/       Consultas reactivas sobre Dexie
 └── estilos/     Tokens de diseño, reinicio y piezas compartidas.
@@ -242,6 +242,24 @@ Un número inventado sin decir que es inventado acabaría copiado en el formular
 Un vehículo vendido se congela en los kilómetros de la entrega: no tiene sentido estimar
 cuánto ha rodado desde que dejó de ser tuyo.
 
+### Alertas
+
+Todo lo que hay que repetir es una **alerta** con nombre libre: «Cambio de aceite», «ITV»,
+«Servicio anual Audi». Vence cada X km, cada Y meses (lo que llegue antes) o en una fecha
+fija, y guarda su propia «última vez». No hay tipos cerrados ni reglas de serie que vuelvan
+solas: al dar de alta un vehículo se proponen unas cuantas según su categoría, se marcan
+las que interesan y a partir de ahí se añaden, cambian o borran desde la ficha.
+
+- **Hecha en un toque.** Desde el panel o la ficha, «Marcar como hecha» pide fecha, km y
+  coste (todo prerrellenado) y reinicia la alerta. Si es de mantenimiento deja el servicio en
+  el histórico; si es un papel (ITV, seguro, impuesto) apunta el gasto con su categoría.
+- **Un servicio cubre varias alertas.** El servicio anual del taller que ya incluye aceite y
+  filtros se apunta una vez, marcando las dos, y las dos vuelven a contar desde ese día.
+- **Una factura vieja no pisa una última vez más reciente.** Apuntar hoy el servicio de 2023
+  no hace que el aceite «caduque».
+- **El botón ＋** abre, desde cualquier pantalla, repostaje, alerta hecha, servicio, gasto o
+  kilómetros para el vehículo elegido.
+
 ### Motor de vencimientos
 
 `src/dominio/vencimientos.ts` responde a una sola pregunta: qué le toca a este vehículo,
@@ -262,11 +280,11 @@ De ahí salen tres consecuencias:
 - **Un vehículo vendido no genera ningún vencimiento.** Está congelado; recordarte su ITV
   sería recordarte algo que ya no es asunto tuyo.
 
-**Lo que no se ha registrado nunca no se marca como vencido.** Si compraste el coche en 2019
+**Lo que no tiene «última vez» no se marca como vencido.** Si compraste el coche en 2019
 y no has anotado ningún cambio de aceite, las cuentas desde la compra dirían «cinco años de
 retraso», pero eso no es creíble: lo normal es que sí lo cambiaras y no lo anotaras. Lo que
-la app sabe de verdad es que le falta el dato, y eso es lo que dice: «Sin registrar», en
-ámbar. Media docena de falsos rojos a la vez ahogan el aviso que sí es real —la ITV
+la app sabe de verdad es que le falta el dato, y eso es lo que dice: «Falta la última vez»,
+en ámbar. Media docena de falsos rojos a la vez ahogan el aviso que sí es real —la ITV
 caducada— y enseñan a ignorar el color.
 
 Por el mismo motivo, el orden va por **rangos** antes que por urgencia numérica: primero lo
@@ -390,13 +408,13 @@ es mejor dejar pulsar y contestar señalando los campos.
 | --- | --- |
 | `Vehiculo` | Incluye `categoria` (turismo, autocaravana, furgoneta, moto) y `estado: 'activo' \| 'vendido'` con fecha, kilómetros y precio de venta. Un vehículo vendido se congela: no genera avisos ni cuenta en el gasto corriente, pero conserva su histórico. |
 | `LecturaOdometro` | Solo lecturas manuales, de alta y de venta. Los kilómetros de otros registros se unen al leer, no se copian. |
-| `Mantenimiento` | Tipo, fecha, km, taller, coste, piezas, notas y adjuntos. |
-| `ReglaMantenimiento` | Recurrencia doble `cadaKm` / `cadaMeses`, por vehículo. Las plantillas de partida salen de la categoría, no del combustible: ver más abajo. |
+| `Alerta` | Nombre e icono libres; `cadaKm` / `cadaMeses` / `venceEl`, última vez (`ultimaFecha`, `ultimoKm`), antelación propia opcional y dónde se apunta al hacerla (`mantenimiento` o una categoría de gasto). |
+| `Mantenimiento` | Un servicio hecho: título, `alertaIds` que deja a cero, fecha, km, taller, coste, notas y adjuntos. |
 | `Repostaje` | `cantidad` + `unidad` (`'l'` o `'kWh'`), lo que resuelve los eléctricos sin duplicar entidades. Guarda `depositoLleno` y `rupturaSerie` porque sin eso el consumo no se puede calcular bien. |
 | `Gasto` | Categoría, importe, fecha, recurrencia y periodicidad. |
-| `Documento` | Unión discriminada por `tipo`: el seguro tiene compañía y cobertura, la ITV tiene estación y resultado. |
+| `Documento` | Unión discriminada por `tipo`: el seguro tiene compañía y cobertura, la ITV tiene estación y resultado. La caducidad no vive aquí sino en su alerta. |
 | `Adjunto` | `Blob` en su propia tabla, para que consultar gastos no arrastre megabytes de imagen. |
-| `Ajustes` | Registro único con tema, antelaciones de aviso y preferencias. |
+| `Ajustes` | Registro único con tema, antelación general de aviso (`avisoDias`, `avisoKm`) y preferencias. |
 
 **Precio por unidad derivado.** Un repostaje guarda `cantidad` e `importeCentimos`; el
 precio por litro se calcula. Así los tres números no pueden contradecirse entre sí. En el
@@ -406,9 +424,9 @@ formulario, rellenar dos calcula el tercero.
 (1,589 €/l) y el importe dos. Por eso `parsearDecimal` recibe cuántos decimales admite el
 campo: sin ese dato, «1,589» se leería como mil quinientos ochenta y nueve euros.
 
-**La categoría del vehículo manda sobre las recurrencias.** Una autocaravana hace 5.000 km
-al año: una regla de «aceite cada 15.000 km» tardaría tres años en dispararse mientras el
-aceite se degrada igual en el garaje. Por eso sus plantillas se apoyan en el tiempo, sus
+**La categoría del vehículo manda sobre las sugerencias.** Una autocaravana hace 5.000 km
+al año: una alerta de «aceite cada 15.000 km» tardaría tres años en dispararse mientras el
+aceite se degrada igual en el garaje. Por eso las que se le proponen se apoyan en el tiempo, sus
 neumáticos caducan a los seis años aunque tengan dibujo, y tiene dos mantenimientos que no
 existen en un turismo: el **sellado del techo** (anual; una filtración sin detectar pudre la
 célula) y la **instalación de gas** (revisión obligatoria cada cinco años). Una moto, en el
@@ -420,14 +438,15 @@ distribución sea cual sea la categoría.
 La primera vez que se abre la app se cargan cuatro vehículos. No son decorativos: cada uno
 ejercita un camino distinto del código, y las fechas se calculan a partir de *hoy*.
 
-- **El Golf** (Volkswagen, diésel) — 34 repostajes, mantenimientos, seguro e ITV. Incluye
+- **El Golf** (Volkswagen, diésel) — 34 repostajes, servicios, seguro e ITV. Su revisión
+  anual cubre también los filtros, y a la correa de distribución le falta la última vez. Incluye
   repostajes parciales, una ruptura de serie y una subida sostenida de consumo al final.
   Tiene la ITV **caducada**, el seguro venciendo en tres semanas y el impuesto lejos: el
   panel principal tendrá rojo, ámbar y verde desde el primer momento.
 - **La Zoe** (Renault, eléctrico) — carga en kWh, con precios que van de 0,09 €/kWh en casa
-  a 0,59 €/kWh en un cargador rápido. Sin reglas de aceite ni de distribución.
+  a 0,59 €/kWh en un cargador rápido. Sin alertas de aceite ni de distribución.
 - **La Autocaravana** (Benimar sobre Fiat Ducato) — 5.000 km al año en nueve repostajes,
-  el patrón que hace inútiles las reglas por kilómetros. Tiene el **sellado del techo
+  el patrón que hace inútiles las alertas por kilómetros. Tiene el **sellado del techo
   caducado**, que es el aviso que más caro sale ignorar.
 - **El Ibiza** (SEAT, gasolina) — **vendido**: histórico congelado y sin avisos.
 
@@ -436,12 +455,13 @@ se escriben a mano; si no, al moverse el calendario el odómetro acabaría yendo
 
 ## Tests
 
-364 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
+382 tests, centrados en lo que puede fallar en silencio: aritmética de céntimos, fechas
 cruzando cambios de hora y años bisiestos, lectura de números en formato español, estimación
 de kilometraje (ventana de uso, odómetros que retroceden, lecturas con fecha futura,
 vehículos vendidos), el motor de vencimientos (recurrencia doble en las dos direcciones,
-reglas de una sola dimensión, vehículos parados, antelaciones propias frente a las de
-ajustes, recurrencias personalizadas que no deben mezclarse), validación de entradas,
+alertas de una sola dimensión o de fecha fija, vehículos parados, antelaciones propias
+frente a las de ajustes, alertas sin última vez), las acciones de alertas (un servicio que
+reinicia varias, facturas viejas que no pisan, papeles que van a gastos), validación de entradas,
 el cálculo de consumo (repostajes parciales, series rotas, datos incompletos, medias
 ponderadas, híbridos enchufables), el coste por kilómetro y el de propiedad, integridad del
 repositorio y coherencia de los catálogos y los datos de ejemplo.
@@ -457,7 +477,7 @@ Otros dos fallos reales que salieron al usar la app y que ahora tienen test:
   `useLiveQuery` ejecuta sus consultas dentro de una transacción de solo lectura, la app
   entera reventaba con `ReadOnlyError` en cuanto los ajustes faltaban: justo después de un
   «borrar todo» o de una importación.
-- **Las reglas sin registro previo se anunciaban como vencidas hace años**, lo que llenaba
+- **Los mantenimientos sin registro previo se anunciaban como vencidos hace años**, lo que llenaba
   el panel de rojos falsos y ahogaba el único aviso real.
 - **Borrar no borraba.** El borrado de un registro suelto ya era lógico, pero borrar un
   vehículo entero y «borrar todo» seguían eliminando las filas de verdad. Sin rastro, la

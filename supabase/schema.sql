@@ -7,6 +7,9 @@
 -- Se conserva aquí como documentación y para poder recrear el proyecto desde
 -- cero: Panel de Supabase → SQL Editor → pegar todo → Run. Es idempotente.
 --
+-- Refleja el estado DESPUÉS de las migraciones de `supabase/migraciones/`.
+-- En un proyecto que ya existía se aplican esas, no este archivo.
+--
 -- QUÉ HACE
 --  1. Crea una tabla por entidad del dominio, con las mismas columnas que ya
 --     tiene IndexedDB (traducidas a snake_case), más `propietario_id`.
@@ -87,8 +90,32 @@ create table if not exists public.lecturas (
 );
 
 -- -----------------------------------------------------------------------------
--- Mantenimientos y sus reglas de recurrencia
+-- Alertas y mantenimientos (servicios hechos)
 -- -----------------------------------------------------------------------------
+-- Una alerta es algo que hay que repetir: vence cada X km, cada Y meses o en
+-- una fecha fija, y guarda su propia «última vez». Un mantenimiento puede
+-- cubrir varias alertas a la vez (`alerta_ids`).
+
+create table if not exists public.alertas (
+  id                   uuid primary key,
+  propietario_id       uuid not null references auth.users (id) on delete cascade,
+  creado_en            timestamptz not null default now(),
+  actualizado_en       timestamptz not null default now(),
+  borrado_en           timestamptz,
+
+  vehiculo_id          uuid not null,
+  nombre               text not null,
+  icono                text not null,
+  cada_km              integer,
+  cada_meses           integer,
+  vence_el             date,
+  ultima_fecha         date,
+  ultimo_km            integer,
+  aviso_dias           integer,
+  aviso_km             integer,
+  apunte               text not null,
+  notas                text
+);
 
 create table if not exists public.mantenimientos (
   id                   uuid primary key,
@@ -98,32 +125,14 @@ create table if not exists public.mantenimientos (
   borrado_en           timestamptz,
 
   vehiculo_id          uuid not null,
-  tipo                 text not null,
-  tipo_personalizado   text,
+  titulo               text not null default '',
+  alerta_ids           jsonb not null default '[]'::jsonb,
   fecha                date not null,
   km                   integer,
   taller               text,
   coste_centimos       integer not null,
-  piezas               jsonb not null default '[]'::jsonb,
   notas                text,
   adjunto_ids          jsonb not null default '[]'::jsonb
-);
-
-create table if not exists public.reglas (
-  id                   uuid primary key,
-  propietario_id       uuid not null references auth.users (id) on delete cascade,
-  creado_en            timestamptz not null default now(),
-  actualizado_en       timestamptz not null default now(),
-  borrado_en           timestamptz,
-
-  vehiculo_id          uuid not null,
-  tipo                 text not null,
-  tipo_personalizado   text,
-  cada_km              integer,
-  cada_meses           integer,
-  aviso_km             integer,
-  aviso_dias           integer,
-  activa               boolean not null default true
 );
 
 -- -----------------------------------------------------------------------------
@@ -193,8 +202,6 @@ create table if not exists public.documentos (
   vehiculo_id          uuid not null,
   tipo                 text not null,
   fecha_emision        date,
-  fecha_vencimiento    date,
-  aviso_dias           integer,
   notas                text,
   adjunto_ids          jsonb not null default '[]'::jsonb,
   detalle              jsonb not null default '{}'::jsonb
@@ -232,8 +239,8 @@ create table if not exists public.ajustes (
 
   tema                 text not null default 'sistema',
   vehiculo_por_defecto_id uuid,
-  antelacion_mantenimiento jsonb not null default '{}'::jsonb,
-  antelacion_documento_dias jsonb not null default '{}'::jsonb,
+  aviso_dias           integer not null default 30,
+  aviso_km             integer not null default 1000,
   notificaciones_activadas boolean not null default false,
   ultima_revision_avisos timestamptz,
   ultima_copia_en      timestamptz
@@ -251,8 +258,8 @@ create index if not exists lecturas_propietario_idx on public.lecturas (propieta
 create index if not exists lecturas_vehiculo_idx on public.lecturas (vehiculo_id);
 create index if not exists mantenimientos_propietario_idx on public.mantenimientos (propietario_id, actualizado_en);
 create index if not exists mantenimientos_vehiculo_idx on public.mantenimientos (vehiculo_id);
-create index if not exists reglas_propietario_idx on public.reglas (propietario_id, actualizado_en);
-create index if not exists reglas_vehiculo_idx on public.reglas (vehiculo_id);
+create index if not exists alertas_propietario_idx on public.alertas (propietario_id, actualizado_en);
+create index if not exists alertas_vehiculo_idx on public.alertas (vehiculo_id);
 create index if not exists repostajes_propietario_idx on public.repostajes (propietario_id, actualizado_en);
 create index if not exists repostajes_vehiculo_idx on public.repostajes (vehiculo_id);
 create index if not exists gastos_propietario_idx on public.gastos (propietario_id, actualizado_en);
@@ -273,7 +280,7 @@ declare
   tabla text;
 begin
   foreach tabla in array array[
-    'vehiculos', 'lecturas', 'mantenimientos', 'reglas',
+    'vehiculos', 'lecturas', 'mantenimientos', 'alertas',
     'repostajes', 'gastos', 'documentos', 'adjuntos'
   ]
   loop
