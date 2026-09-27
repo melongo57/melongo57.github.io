@@ -98,3 +98,84 @@
 .vacio .boton {
   margin-top: var(--e-2);
 }
+
+/*
+ * Opciones táctiles: píldoras que se marcan y desmarcan con un toque.
+ *
+ * Son la forma rápida de elegir de una lista corta —sugerencias de alerta,
+ * qué alertas cubre un servicio, qué vehículo— sin abrir un desplegable, que
+ * en el móvil cuesta dos toques y tapa media pantalla.
+ */
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: 40px;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--c-borde-fuerte);
+  border-radius: var(--r-full);
+  background: var(--c-superficie);
+  color: var(--c-texto);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transicion),
+    border-color var(--transicion),
+    color var(--transicion);
+}
+
+.opcion:hover {
+  border-color: var(--c-acento);
+}
+
+.opcion:focus-visible {
+  outline: 2px solid var(--c-acento);
+  outline-offset: 2px;
+}
+
+.opcion[aria-pressed='true'] {
+  background: var(--c-acento-suave);
+  border-color: var(--c-acento);
+  color: var(--c-acento);
+}
+
+.opcion__marca {
+  font-size: var(--t-xs);
+}
+
+/* Desplegable nativo para lo secundario de un formulario. */
+.mas-opciones > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  color: var(--c-acento);
+  padding: var(--e-2) 0;
+}
+
+.mas-opciones > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mas-opciones > summary::before {
+  content: '▸ ';
+}
+
+.mas-opciones[open] > summary::before {
+  content: '▾ ';
+}
+
+.mas-opciones__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding-top: var(--e-3);
+}

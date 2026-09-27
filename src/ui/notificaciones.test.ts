@@ -7,13 +7,15 @@ const HOY = '2026-08-24';
 function v(cambios: Partial<Vencimiento> = {}): Vencimiento {
   return {
     id: 'doc:d1',
+    alertaId: 'd1',
     vehiculoId: 'v1',
     titulo: 'ITV',
-    origen: { clase: 'documento', documentoId: 'd1', tipo: 'itv' },
+    icono: '🔎',
     semaforo: 'vencido',
     diasRestantes: -6,
     motivo: 'tiempo',
     urgencia: -6,
+    faltaUltimaVez: false,
     ...cambios,
   };
 }
@@ -32,13 +34,13 @@ describe('seleccionarAvisos', () => {
     expect(seleccionarAvisos([v({ semaforo: 'ok', urgencia: 200 })], {}, HOY)).toEqual([]);
   });
 
-  it('no avisa de lo que nunca se ha registrado', () => {
+  it('no avisa de las alertas a las que les falta la última vez', () => {
     // Es un hueco en el histórico, no una tarea con fecha. Notificarlo sería
     // sacar el móvil del bolsillo para nada.
     const sinRegistro = v({
-      id: 'regla:r1',
+      id: 'alerta:r1',
       semaforo: 'proximo',
-      origen: { clase: 'mantenimiento', reglaId: 'r1', tipo: 'filtros', sinRegistroPrevio: true },
+      faltaUltimaVez: true,
     });
     expect(seleccionarAvisos([sinRegistro], {}, HOY)).toEqual([]);
   });

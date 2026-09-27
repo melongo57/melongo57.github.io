@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { diasEntre, hoyISO, mesesEntre } from '@/dominio/fechas.ts';
-import { kmAnuales } from '@/dominio/odometro.ts';
+import { estimarKm, kmAnuales } from '@/dominio/odometro.ts';
+import { calcularVencimientos } from '@/dominio/vencimientos.ts';
 import { resumirConsumo } from '@/dominio/consumo.ts';
 import { nuevoId } from '@/dominio/ids.ts';
 import { BaseDatosGaraje } from './db.ts';
@@ -27,6 +28,24 @@ async function porAlias(alias: string) {
   const v = vehiculos.find((x) => x.alias === alias);
   if (!v) throw new Error(`No existe el vehículo ${alias}`);
   return v;
+}
+
+/** Lo que enseñaría la app: el motor de vencimientos sobre los datos sembrados. */
+async function vencimientosDe(alias: string) {
+  const vehiculo = await porAlias(alias);
+  const [puntos, alertas, ajustes] = await Promise.all([
+    repo.puntosOdometro(vehiculo.id),
+    repo.alertas.listarPorVehiculo(vehiculo.id),
+    repo.ajustes.obtener(),
+  ]);
+  const estimacion = estimarKm(puntos, vehiculo);
+  const lista = calcularVencimientos({ vehiculo, alertas, estimacion, ajustes });
+  const por = (nombre: string) => {
+    const v = lista.find((x) => x.titulo === nombre);
+    if (!v) throw new Error(`${alias} no tiene la alerta «${nombre}»`);
+    return v;
+  };
+  return { lista, por, alertas };
 }
 
 describe('datos de ejemplo', () => {
@@ -79,25 +98,23 @@ describe('La Autocaravana — pocos kilómetros, mantenimiento por tiempo', () =
     }
   });
 
-  it('tiene las reglas propias de una autocaravana', async () => {
-    const camper = await porAlias('La Autocaravana');
-    const reglas = await repo.reglas.listarPorVehiculo(camper.id);
-    const tipos = reglas.map((r) => r.tipo);
+  it('tiene las alertas propias de una autocaravana', async () => {
+    const { alertas } = await vencimientosDe('La Autocaravana');
+    const nombres = alertas.map((a) => a.nombre);
 
-    expect(tipos).toContain('sellado_techo');
-    expect(tipos).toContain('instalacion_gas');
-    expect(reglas.find((r) => r.tipo === 'sellado_techo')?.cadaMeses).toBe(12);
+    expect(nombres).toContain('Sellado del techo');
+    expect(nombres).toContain('Instalación de gas');
+    expect(alertas.find((a) => a.nombre === 'Sellado del techo')?.cadaMeses).toBe(12);
   });
 
   it('tiene el sellado del techo caducado', async () => {
-    const camper = await porAlias('La Autocaravana');
-    const mantenimientos = await repo.mantenimientos.listarPorVehiculo(camper.id);
-    const sellado = mantenimientos.find((m) => m.tipo === 'sellado_techo');
+    const { por, alertas } = await vencimientosDe('La Autocaravana');
+    const sellado = alertas.find((a) => a.nombre === 'Sellado del techo')!;
 
-    expect(sellado).toBeDefined();
-    // La regla es anual y del último hace más de doce meses: debe salir en
-    // rojo en el panel. Es el aviso que más caro sale ignorar.
-    expect(mesesEntre(sellado!.fecha, hoyISO())).toBeGreaterThan(12);
+    // Es anual y el último fue hace más de doce meses: sale en rojo en el
+    // panel. Es el aviso que más caro sale ignorar.
+    expect(mesesEntre(sellado.ultimaFecha!, hoyISO())).toBeGreaterThan(12);
+    expect(por('Sellado del techo').semaforo).toBe('vencido');
   });
 });
 
@@ -130,28 +147,44 @@ describe('El Golf — caso denso de combustión', () => {
     }
   });
 
-  it('tiene reglas de mantenimiento con recurrencia doble', async () => {
-    const golf = await porAlias('El Golf');
-    const reglas = await repo.reglas.listarPorVehiculo(golf.id);
-    const aceite = reglas.find((r) => r.tipo === 'aceite');
+  it('tiene alertas con recurrencia doble', async () => {
+    const { alertas } = await vencimientosDe('El Golf');
+    const aceite = alertas.find((a) => a.nombre === 'Cambio de aceite');
     expect(aceite?.cadaKm).toBe(15000);
     expect(aceite?.cadaMeses).toBe(12);
-    // Toda regla debe poder disparar por algo.
-    expect(reglas.every((r) => r.cadaKm !== undefined || r.cadaMeses !== undefined)).toBe(true);
+    // Toda alerta debe poder vencer por algo.
+    expect(
+      alertas.every((a) => a.cadaKm !== undefined || a.cadaMeses !== undefined || a.venceEl),
+    ).toBe(true);
   });
 
   it('deja el panel con un vencimiento en rojo, uno en ámbar y uno en verde', async () => {
+    const { por } = await vencimientosDe('El Golf');
+    expect(por('ITV').semaforo).toBe('vencido');
+    expect(por('Seguro').semaforo).toBe('proximo');
+    expect(por('Impuesto de circulación').semaforo).toBe('ok');
+  });
+
+  it('enseña una alerta a la que le falta la última vez', async () => {
+    // La correa no se ha cambiado nunca: el caso que pide el dato en vez de
+    // inventarse un retraso de años.
+    const { por } = await vencimientosDe('El Golf');
+    expect(por('Correa de distribución').faltaUltimaVez).toBe(true);
+  });
+
+  it('un solo servicio reinicia dos alertas a la vez', async () => {
+    // La revisión anual del taller incluye los filtros: el caso de «el
+    // mantenimiento anual ya es un cambio de aceite y filtros».
+    const { alertas } = await vencimientosDe('El Golf');
     const golf = await porAlias('El Golf');
-    const hoy = hoyISO();
-    const docs = await repo.documentos.listarPorVehiculo(golf.id);
+    const servicios = await repo.mantenimientos.listarPorVehiculo(golf.id);
+    const revision = servicios.find((m) => m.titulo === 'Revisión anual')!;
+    const revisionAlerta = alertas.find((a) => a.nombre === 'Revisión / servicio')!;
+    const filtros = alertas.find((a) => a.nombre === 'Filtros')!;
 
-    const itv = docs.find((d) => d.tipo === 'itv');
-    const seguro = docs.find((d) => d.tipo === 'seguro');
-    const impuesto = docs.find((d) => d.tipo === 'impuesto_circulacion');
-
-    expect(itv?.fechaVencimiento! < hoy).toBe(true); // vencida
-    expect(seguro?.fechaVencimiento! > hoy).toBe(true); // próxima
-    expect(impuesto?.fechaVencimiento! > seguro!.fechaVencimiento!).toBe(true); // lejana
+    expect(revision.alertaIds.sort()).toEqual([revisionAlerta.id, filtros.id].sort());
+    expect(revisionAlerta.ultimaFecha).toBe(revision.fecha);
+    expect(filtros.ultimaFecha).toBe(revision.fecha);
   });
 });
 
@@ -163,13 +196,12 @@ describe('La Zoe — caso eléctrico', () => {
     expect(cargas.every((c) => c.unidad === 'kWh')).toBe(true);
   });
 
-  it('no tiene reglas de aceite ni de distribución', async () => {
-    const zoe = await porAlias('La Zoe');
-    const reglas = await repo.reglas.listarPorVehiculo(zoe.id);
-    const tipos = reglas.map((r) => r.tipo);
-    expect(tipos).not.toContain('aceite');
-    expect(tipos).not.toContain('distribucion');
-    expect(tipos).toContain('neumaticos');
+  it('no tiene alertas de aceite ni de distribución', async () => {
+    const { alertas } = await vencimientosDe('La Zoe');
+    const nombres = alertas.map((a) => a.nombre);
+    expect(nombres).not.toContain('Cambio de aceite');
+    expect(nombres).not.toContain('Correa de distribución');
+    expect(nombres).toContain('Neumáticos');
   });
 });
 

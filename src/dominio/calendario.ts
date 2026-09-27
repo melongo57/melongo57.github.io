@@ -23,7 +23,7 @@ import type { Vencimiento } from './vencimientos.ts';
 // Eventos futuros
 // ---------------------------------------------------------------------------
 
-export type ClaseEvento = 'mantenimiento' | 'documento' | 'gasto';
+export type ClaseEvento = 'alerta' | 'gasto';
 
 export interface EventoCalendario {
   /** Estable entre exportaciones: reimportar actualiza en vez de duplicar. */
@@ -32,6 +32,7 @@ export interface EventoCalendario {
   titulo: string;
   descripcion: string;
   clase: ClaseEvento;
+  icono: string;
   vehiculoId: Id;
   vehiculoAlias: string;
   /** Días de antelación del recordatorio. */
@@ -57,16 +58,16 @@ export function eventosDeVencimientos(
   const hoy = opciones.hoy ?? hoyISO();
 
   return vencimientos
+    // Una alerta sin última vez ni fecha fija no tiene fecha que llevar al
+    // calendario: se queda fuera por no tener `fechaLimite`.
     .filter((v) => v.fechaLimite !== undefined)
-    // Lo que no se ha registrado nunca no tiene una fecha creíble que llevar
-    // al calendario: llenaría la agenda de citas inventadas.
-    .filter((v) => !(v.origen.clase === 'mantenimiento' && v.origen.sinRegistroPrevio))
     .map((v) => ({
       uid: `${v.id}@mi-garaje`,
       fecha: v.fechaLimite!,
       titulo: `${v.titulo} · ${vehiculo.alias}`,
       descripcion: descripcionDe(v, vehiculo),
-      clase: v.origen.clase === 'documento' ? ('documento' as const) : ('mantenimiento' as const),
+      clase: 'alerta' as const,
+      icono: v.icono,
       vehiculoId: vehiculo.id,
       vehiculoAlias: vehiculo.alias,
       avisoDias: AVISO_POR_DEFECTO,
@@ -79,9 +80,9 @@ function descripcionDe(v: Vencimiento, vehiculo: Vehiculo): string {
   if (v.kmLimite !== undefined) {
     partes.push(`O al llegar a ${new Intl.NumberFormat('es-ES').format(v.kmLimite)} km.`);
   }
-  if (v.desdeFecha) {
-    const [a, m, d] = v.desdeFecha.split('-');
-    partes.push(`Último registro: ${d}/${m}/${a}.`);
+  if (v.ultimaFecha) {
+    const [a, m, d] = v.ultimaFecha.split('-');
+    partes.push(`Última vez: ${d}/${m}/${a}.`);
   }
   return partes.join('\n');
 }
@@ -139,6 +140,7 @@ export function eventosDeGastos(
         `Cargo previsto de ${formatearEuros(gasto.importeCentimos)}.\n` +
         `Periodicidad: ${PERIODICIDADES[gasto.periodicidad!].nombre.toLowerCase()}.`,
       clase: 'gasto',
+      icono: CATEGORIAS_GASTO[gasto.categoria].icono,
       vehiculoId: vehiculo.id,
       vehiculoAlias: vehiculo.alias,
       avisoDias: 7,

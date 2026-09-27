@@ -148,6 +148,12 @@
   border: 1px dashed var(--c-borde-fuerte);
   font-size: var(--t-sm);
   color: var(--c-texto-tenue);
+  text-decoration: none;
+}
+
+a.panel-tarjeta__pendiente:hover {
+  border-color: var(--c-acento);
+  color: var(--c-acento);
 }
 
 .panel-tarjeta__acciones {

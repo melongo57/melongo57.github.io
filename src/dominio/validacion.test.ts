@@ -3,8 +3,8 @@ import type { PuntoOdometro } from './tipos.ts';
 import {
   incidenciasDe,
   validarLectura,
+  validarAlerta,
   validarMantenimiento,
-  validarRegla,
   validarVehiculo,
 } from './validacion.ts';
 
@@ -218,7 +218,7 @@ describe('validarMantenimiento', () => {
     fecha: '2026-08-10',
     km: 125400,
     costeCentimos: 9640,
-    tipo: 'aceite',
+    titulo: 'Cambio de aceite',
   } as const;
 
   it('acepta un registro coherente', () => {
@@ -247,21 +247,12 @@ describe('validarMantenimiento', () => {
     ).toBe(false);
   });
 
-  it('exige nombre en los mantenimientos de tipo «otro»', () => {
-    const sinNombre = validarMantenimiento(
-      historico,
-      { ...base, tipo: 'otro' },
-      { hoy: HOY },
-    );
-    expect(sinNombre.valido).toBe(false);
-    expect(incidenciasDe(sinNombre, 'tipoPersonalizado')).toHaveLength(1);
-
-    const conNombre = validarMantenimiento(
-      historico,
-      { ...base, tipo: 'otro', tipoPersonalizado: 'Amortiguadores' },
-      { hoy: HOY },
-    );
-    expect(conNombre.valido).toBe(true);
+  it('exige un título', () => {
+    // Sin título y sin alertas marcadas, el histórico tendría una fila que no
+    // dice qué se hizo.
+    const sinTitulo = validarMantenimiento(historico, { ...base, titulo: '  ' }, { hoy: HOY });
+    expect(sinTitulo.valido).toBe(false);
+    expect(incidenciasDe(sinTitulo, 'titulo')).toHaveLength(1);
   });
 
   it('avisa de una fecha futura', () => {
@@ -270,31 +261,47 @@ describe('validarMantenimiento', () => {
   });
 });
 
-describe('validarRegla', () => {
-  it('acepta una regla con cualquiera de las dos dimensiones', () => {
-    expect(validarRegla({ cadaKm: 15000 }).valido).toBe(true);
-    expect(validarRegla({ cadaMeses: 12 }).valido).toBe(true);
-    expect(validarRegla({ cadaKm: 15000, cadaMeses: 12 }).valido).toBe(true);
+describe('validarAlerta', () => {
+  const base = { nombre: 'Cambio de aceite' };
+
+  it('acepta cualquiera de las tres formas de vencer', () => {
+    expect(validarAlerta({ ...base, cadaKm: 15000 }, { hoy: HOY }).valido).toBe(true);
+    expect(validarAlerta({ ...base, cadaMeses: 12 }, { hoy: HOY }).valido).toBe(true);
+    expect(validarAlerta({ ...base, venceEl: '2027-03-12' }, { hoy: HOY }).valido).toBe(true);
   });
 
-  it('rechaza una regla que no puede vencer por nada', () => {
+  it('rechaza una alerta que no puede vencer por nada', () => {
     // Sería peor que no tenerla: da sensación de estar cubierto sin avisar.
-    const v = validarRegla({});
+    const v = validarAlerta(base, { hoy: HOY });
     expect(v.valido).toBe(false);
     expect(incidenciasDe(v, 'cadaKm')).toHaveLength(1);
   });
 
+  it('exige un nombre', () => {
+    const v = validarAlerta({ nombre: '  ', cadaMeses: 12 }, { hoy: HOY });
+    expect(v.valido).toBe(false);
+    expect(incidenciasDe(v, 'nombre')).toHaveLength(1);
+  });
+
   it('rechaza intervalos de cero o negativos', () => {
-    expect(validarRegla({ cadaKm: 0 }).valido).toBe(false);
-    expect(validarRegla({ cadaMeses: -3 }).valido).toBe(false);
+    expect(validarAlerta({ ...base, cadaKm: 0 }, { hoy: HOY }).valido).toBe(false);
+    expect(validarAlerta({ ...base, cadaMeses: -3 }, { hoy: HOY }).valido).toBe(false);
+  });
+
+  it('avisa de una última vez en el futuro, sin impedirla', () => {
+    const v = validarAlerta({ ...base, cadaMeses: 12, ultimaFecha: '2027-01-01' }, { hoy: HOY });
+    expect(v.valido).toBe(true);
+    expect(v.requiereConfirmacion).toBe(true);
   });
 
   it('avisa si la antelación se come el intervalo entero', () => {
     // Avisar 15.000 km antes de un intervalo de 15.000 km es avisar siempre.
-    const v = validarRegla({ cadaKm: 15000, avisoKm: 15000 });
+    const v = validarAlerta({ ...base, cadaKm: 15000, avisoKm: 15000 }, { hoy: HOY });
     expect(v.valido).toBe(true);
     expect(incidenciasDe(v, 'avisoKm')).toHaveLength(1);
 
-    expect(validarRegla({ cadaKm: 15000, avisoKm: 1000 }).requiereConfirmacion).toBe(false);
+    expect(
+      validarAlerta({ ...base, cadaKm: 15000, avisoKm: 1000 }, { hoy: HOY }).requiereConfirmacion,
+    ).toBe(false);
   });
 });

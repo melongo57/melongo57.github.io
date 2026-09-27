@@ -1,4 +1,4 @@
-import { CATEGORIAS_GASTO, nombreMantenimiento } from '@/dominio/catalogos.ts';
+import { CATEGORIAS_GASTO } from '@/dominio/catalogos.ts';
 import { aEuros } from '@/dominio/dinero.ts';
 import { hoyISO } from '@/dominio/fechas.ts';
 import type { Gasto, Mantenimiento, Repostaje, Vehiculo } from '@/dominio/tipos.ts';
@@ -119,8 +119,8 @@ export function generarCsvGastos(datos: DatosCsv): string {
         nombreVehiculo,
         matricula,
         'Mantenimiento',
-        nombreMantenimiento(m.tipo, m.tipoPersonalizado),
-        [m.taller, ...m.piezas].filter(Boolean).join(', '),
+        m.titulo,
+        m.taller ?? '',
         numeroEspanol(aEuros(m.costeCentimos)),
         m.km ?? '',
         '',

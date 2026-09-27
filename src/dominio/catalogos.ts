@@ -1,12 +1,11 @@
 import type {
-  AntelacionAviso,
+  ApunteAlerta,
   CategoriaGasto,
   CategoriaVehiculo,
   CoberturaSeguro,
   Periodicidad,
   TipoCombustible,
   TipoDocumento,
-  TipoMantenimiento,
   UnidadEnergia,
 } from './tipos.ts';
 
@@ -77,170 +76,169 @@ export function unidadPrincipalDe(combustible: TipoCombustible): UnidadEnergia {
 }
 
 // ---------------------------------------------------------------------------
-// Mantenimiento
+// Alertas: sugerencias de partida
 // ---------------------------------------------------------------------------
 
-export const TIPOS_MANTENIMIENTO: Record<TipoMantenimiento, Etiqueta> = {
-  aceite: { clave: 'aceite', nombre: 'Cambio de aceite', icono: '🛢️' },
-  filtros: { clave: 'filtros', nombre: 'Filtros', icono: '🌀' },
-  neumaticos: { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞' },
-  frenos: { clave: 'frenos', nombre: 'Frenos', icono: '🛑' },
-  distribucion: { clave: 'distribucion', nombre: 'Correa o cadena de distribución', icono: '⚙️' },
-  bateria: { clave: 'bateria', nombre: 'Batería', icono: '🔋' },
-  revision_general: { clave: 'revision_general', nombre: 'Revisión general', icono: '🔧' },
-  sellado_techo: { clave: 'sellado_techo', nombre: 'Sellado del techo', icono: '💧' },
-  instalacion_gas: { clave: 'instalacion_gas', nombre: 'Instalación de gas', icono: '🔥' },
-  otro: { clave: 'otro', nombre: 'Otro', icono: '📋' },
-};
-
-export const ORDEN_MANTENIMIENTO: readonly TipoMantenimiento[] = [
-  'aceite',
-  'filtros',
-  'neumaticos',
-  'frenos',
-  'distribucion',
-  'bateria',
-  'revision_general',
-  'sellado_techo',
-  'instalacion_gas',
-  'otro',
-];
-
-export interface PlantillaRegla {
+export interface SugerenciaAlerta {
+  /** Estable: sirve para saber qué sugerencias ya tiene puestas un vehículo. */
+  readonly clave: string;
+  readonly nombre: string;
+  readonly icono: string;
+  readonly apunte: ApunteAlerta;
   readonly cadaKm?: number;
   readonly cadaMeses?: number;
+  readonly avisoKm?: number;
+  readonly avisoDias?: number;
+  /**
+   * Lo normal es conocer la fecha exacta (la ITV va en la pegatina, el seguro
+   * en la póliza): el formulario la pide en primer plano.
+   */
+  readonly pideFecha?: boolean;
+  /**
+   * Marcada de entrada al dar de alta un vehículo. Son pocas a propósito: la
+   * versión anterior creaba nueve avisos por coche y el usuario no podía
+   * quitar los que le sobraban. Mejor empezar corto y añadir.
+   */
+  readonly basica?: boolean;
 }
 
-type Plantilla = Record<TipoMantenimiento, PlantillaRegla | null>;
+/** Papeles con fecha: iguales para cualquier vehículo. */
+const PAPELES: readonly SugerenciaAlerta[] = [
+  { clave: 'itv', nombre: 'ITV', icono: '🔎', apunte: 'itv', cadaMeses: 12, pideFecha: true, basica: true },
+  { clave: 'seguro', nombre: 'Seguro', icono: '🛡️', apunte: 'seguro', cadaMeses: 12, pideFecha: true, basica: true },
+  { clave: 'impuesto', nombre: 'Impuesto de circulación', icono: '🏛️', apunte: 'impuesto_circulacion', cadaMeses: 12, pideFecha: true, avisoDias: 21 },
+];
+
+type Mecanica = readonly SugerenciaAlerta[];
+
+const TURISMO: Mecanica = [
+  { clave: 'revision', nombre: 'Revisión / servicio', icono: '🔧', apunte: 'mantenimiento', cadaKm: 15000, cadaMeses: 12, basica: true },
+  { clave: 'aceite', nombre: 'Cambio de aceite', icono: '🛢️', apunte: 'mantenimiento', cadaKm: 15000, cadaMeses: 12 },
+  { clave: 'filtros', nombre: 'Filtros', icono: '🌀', apunte: 'mantenimiento', cadaKm: 30000, cadaMeses: 24 },
+  { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞', apunte: 'mantenimiento', cadaKm: 40000, cadaMeses: 60, avisoKm: 2000, avisoDias: 45 },
+  { clave: 'frenos', nombre: 'Frenos', icono: '🛑', apunte: 'mantenimiento', cadaKm: 50000, cadaMeses: 48, avisoKm: 2000 },
+  { clave: 'distribucion', nombre: 'Correa de distribución', icono: '⚙️', apunte: 'mantenimiento', cadaKm: 120000, cadaMeses: 120, avisoKm: 5000, avisoDias: 90 },
+  { clave: 'bateria', nombre: 'Batería', icono: '🔋', apunte: 'mantenimiento', cadaMeses: 60, avisoDias: 60 },
+];
 
 /**
- * Recurrencias de partida al dar de alta un vehículo. Son un punto de arranque
- * razonable, no el libro de mantenimiento del fabricante: se editan por
- * vehículo desde su ficha.
+ * Un eléctrico no lleva aceite motor ni correa de distribución, y los frenos
+ * duran mucho más por la retención regenerativa. El filtro que queda es el
+ * del habitáculo.
  */
-const TURISMO: Plantilla = {
-  aceite: { cadaKm: 15000, cadaMeses: 12 },
-  filtros: { cadaKm: 30000, cadaMeses: 24 },
-  neumaticos: { cadaKm: 40000, cadaMeses: 60 },
-  frenos: { cadaKm: 50000, cadaMeses: 48 },
-  distribucion: { cadaKm: 120000, cadaMeses: 120 },
-  bateria: { cadaMeses: 60 },
-  revision_general: { cadaKm: 20000, cadaMeses: 12 },
-  sellado_techo: null,
-  instalacion_gas: null,
-  otro: null,
-};
+const ELECTRICO: Mecanica = [
+  { clave: 'revision', nombre: 'Revisión / servicio', icono: '🔧', apunte: 'mantenimiento', cadaKm: 30000, cadaMeses: 24, basica: true },
+  { clave: 'filtros', nombre: 'Filtro de habitáculo', icono: '🌀', apunte: 'mantenimiento', cadaMeses: 24 },
+  { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞', apunte: 'mantenimiento', cadaKm: 35000, cadaMeses: 60, avisoKm: 2000, avisoDias: 45 },
+  { clave: 'frenos', nombre: 'Frenos', icono: '🛑', apunte: 'mantenimiento', cadaKm: 90000, cadaMeses: 48, avisoKm: 2000 },
+  { clave: 'bateria', nombre: 'Batería de 12 V', icono: '🔋', apunte: 'mantenimiento', cadaMeses: 48, avisoDias: 60 },
+];
 
 /**
- * Un eléctrico no lleva aceite motor, ni filtros de combustible, ni correa de
- * distribución. Los frenos duran mucho más por la retención regenerativa.
- */
-const ELECTRICO: Plantilla = {
-  aceite: null,
-  filtros: { cadaMeses: 24 },
-  neumaticos: { cadaKm: 35000, cadaMeses: 60 },
-  frenos: { cadaKm: 90000, cadaMeses: 48 },
-  distribucion: null,
-  bateria: { cadaMeses: 24 },
-  revision_general: { cadaKm: 30000, cadaMeses: 24 },
-  sellado_techo: null,
-  instalacion_gas: null,
-  otro: null,
-};
-
-/**
- * Autocaravana. Aquí manda el TIEMPO, no los kilómetros: una autocaravana
- * hace 5.000 km al año, así que una regla de «cada 15.000 km» tardaría tres
- * años en dispararse mientras el aceite se degrada igual en el garaje.
+ * Autocaravana. Aquí manda el TIEMPO, no los kilómetros: rueda unos 5.000 km
+ * al año, así que un «cada 15.000 km» tardaría tres años en saltar mientras el
+ * aceite se degrada igual en el garaje.
  *
- * Dos mantenimientos propios que no existen en un turismo:
+ * Dos avisos que un turismo no tiene, y por eso van marcados de entrada:
  *  - Sellado del techo: revisión anual. Una filtración sin detectar pudre la
  *    célula y la reparación cuesta más que el vehículo.
  *  - Instalación de gas: revisión obligatoria cada cinco años en España.
  *
- * Y los neumáticos: en un vehículo que rueda poco y pesa mucho, mueren de
- * edad y no de desgaste. Seis años es el límite habitual aunque tengan dibujo.
+ * Y los neumáticos mueren de edad, no de desgaste: seis años es el límite
+ * habitual aunque tengan dibujo.
  */
-const AUTOCARAVANA: Plantilla = {
-  aceite: { cadaKm: 25000, cadaMeses: 24 },
-  filtros: { cadaKm: 40000, cadaMeses: 24 },
-  neumaticos: { cadaKm: 60000, cadaMeses: 72 },
-  frenos: { cadaKm: 50000, cadaMeses: 60 },
-  distribucion: { cadaKm: 150000, cadaMeses: 120 },
+const AUTOCARAVANA: Mecanica = [
+  { clave: 'revision', nombre: 'Revisión / servicio', icono: '🔧', apunte: 'mantenimiento', cadaKm: 20000, cadaMeses: 12, basica: true },
+  { clave: 'sellado_techo', nombre: 'Sellado del techo', icono: '💧', apunte: 'mantenimiento', cadaMeses: 12, avisoDias: 45, basica: true },
+  { clave: 'instalacion_gas', nombre: 'Instalación de gas', icono: '🔥', apunte: 'mantenimiento', cadaMeses: 60, avisoDias: 60, basica: true },
+  { clave: 'aceite', nombre: 'Cambio de aceite', icono: '🛢️', apunte: 'mantenimiento', cadaKm: 25000, cadaMeses: 24 },
+  { clave: 'filtros', nombre: 'Filtros', icono: '🌀', apunte: 'mantenimiento', cadaKm: 40000, cadaMeses: 24 },
+  { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞', apunte: 'mantenimiento', cadaKm: 60000, cadaMeses: 72, avisoDias: 60 },
+  { clave: 'frenos', nombre: 'Frenos', icono: '🛑', apunte: 'mantenimiento', cadaKm: 50000, cadaMeses: 60 },
+  { clave: 'distribucion', nombre: 'Correa de distribución', icono: '⚙️', apunte: 'mantenimiento', cadaKm: 150000, cadaMeses: 120, avisoKm: 5000, avisoDias: 90 },
   // La de servicio se cansa antes que la del motor, y es la que te deja sin
   // nevera a mitad de viaje.
-  bateria: { cadaMeses: 48 },
-  revision_general: { cadaKm: 20000, cadaMeses: 12 },
-  sellado_techo: { cadaMeses: 12 },
-  instalacion_gas: { cadaMeses: 60 },
-  otro: null,
-};
+  { clave: 'bateria', nombre: 'Batería de servicio', icono: '🔋', apunte: 'mantenimiento', cadaMeses: 48, avisoDias: 60 },
+];
 
-const FURGONETA: Plantilla = {
-  aceite: { cadaKm: 20000, cadaMeses: 12 },
-  filtros: { cadaKm: 40000, cadaMeses: 24 },
-  neumaticos: { cadaKm: 50000, cadaMeses: 60 },
-  frenos: { cadaKm: 45000, cadaMeses: 48 },
-  distribucion: { cadaKm: 150000, cadaMeses: 120 },
-  bateria: { cadaMeses: 60 },
-  revision_general: { cadaKm: 25000, cadaMeses: 12 },
-  sellado_techo: null,
-  instalacion_gas: null,
-  otro: null,
-};
+const FURGONETA: Mecanica = [
+  { clave: 'revision', nombre: 'Revisión / servicio', icono: '🔧', apunte: 'mantenimiento', cadaKm: 25000, cadaMeses: 12, basica: true },
+  { clave: 'aceite', nombre: 'Cambio de aceite', icono: '🛢️', apunte: 'mantenimiento', cadaKm: 20000, cadaMeses: 12 },
+  { clave: 'filtros', nombre: 'Filtros', icono: '🌀', apunte: 'mantenimiento', cadaKm: 40000, cadaMeses: 24 },
+  { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞', apunte: 'mantenimiento', cadaKm: 50000, cadaMeses: 60, avisoKm: 2000, avisoDias: 45 },
+  { clave: 'frenos', nombre: 'Frenos', icono: '🛑', apunte: 'mantenimiento', cadaKm: 45000, cadaMeses: 48, avisoKm: 2000 },
+  { clave: 'distribucion', nombre: 'Correa de distribución', icono: '⚙️', apunte: 'mantenimiento', cadaKm: 150000, cadaMeses: 120, avisoKm: 5000, avisoDias: 90 },
+  { clave: 'bateria', nombre: 'Batería', icono: '🔋', apunte: 'mantenimiento', cadaMeses: 60, avisoDias: 60 },
+];
 
 /** Una moto gasta aceite cada 5.000-6.000 km y lleva cadena, no correa. */
-const MOTO: Plantilla = {
-  aceite: { cadaKm: 6000, cadaMeses: 12 },
-  filtros: { cadaKm: 12000, cadaMeses: 24 },
-  neumaticos: { cadaKm: 15000, cadaMeses: 60 },
-  frenos: { cadaKm: 20000, cadaMeses: 36 },
-  distribucion: { cadaKm: 20000, cadaMeses: 24 },
-  bateria: { cadaMeses: 36 },
-  revision_general: { cadaKm: 10000, cadaMeses: 12 },
-  sellado_techo: null,
-  instalacion_gas: null,
-  otro: null,
-};
+const MOTO: Mecanica = [
+  { clave: 'revision', nombre: 'Revisión / servicio', icono: '🔧', apunte: 'mantenimiento', cadaKm: 10000, cadaMeses: 12, basica: true },
+  { clave: 'aceite', nombre: 'Cambio de aceite', icono: '🛢️', apunte: 'mantenimiento', cadaKm: 6000, cadaMeses: 12 },
+  { clave: 'filtros', nombre: 'Filtros', icono: '🌀', apunte: 'mantenimiento', cadaKm: 12000, cadaMeses: 24 },
+  { clave: 'transmision', nombre: 'Kit de transmisión', icono: '⛓️', apunte: 'mantenimiento', cadaKm: 20000, cadaMeses: 24 },
+  { clave: 'neumaticos', nombre: 'Neumáticos', icono: '🛞', apunte: 'mantenimiento', cadaKm: 15000, cadaMeses: 60, avisoKm: 1000 },
+  { clave: 'frenos', nombre: 'Frenos', icono: '🛑', apunte: 'mantenimiento', cadaKm: 20000, cadaMeses: 36 },
+  { clave: 'bateria', nombre: 'Batería', icono: '🔋', apunte: 'mantenimiento', cadaMeses: 36, avisoDias: 60 },
+];
 
 /**
- * La categoría manda sobre el combustible, salvo cuando el vehículo es
- * eléctrico: ahí desaparecen el aceite y la distribución sea lo que sea.
+ * Sugerencias para un vehículo: primero los papeles, luego la mecánica.
+ *
+ * La categoría manda sobre el combustible, salvo en los eléctricos: ahí
+ * desaparecen el aceite y la distribución sea cual sea la carrocería.
  */
-export function plantillaReglas(
+export function sugerenciasAlerta(
   categoria: CategoriaVehiculo,
   combustible: TipoCombustible,
-): Plantilla {
-  if (combustible === 'electrico') return ELECTRICO;
-
-  switch (categoria) {
-    case 'autocaravana':
-      return AUTOCARAVANA;
-    case 'furgoneta':
-      return FURGONETA;
-    case 'moto':
-      return MOTO;
-    case 'turismo':
-    case 'otro':
-      return TURISMO;
-  }
+): readonly SugerenciaAlerta[] {
+  const mecanica =
+    combustible === 'electrico'
+      ? ELECTRICO
+      : categoria === 'autocaravana'
+        ? AUTOCARAVANA
+        : categoria === 'furgoneta'
+          ? FURGONETA
+          : categoria === 'moto'
+            ? MOTO
+            : TURISMO;
+  return [...PAPELES, ...mecanica];
 }
 
-/** Antelación con la que avisar de cada mantenimiento. */
-export const ANTELACION_MANTENIMIENTO: Record<TipoMantenimiento, AntelacionAviso> = {
-  aceite: { avisoKm: 1000, avisoDias: 30 },
-  filtros: { avisoKm: 1500, avisoDias: 30 },
-  neumaticos: { avisoKm: 2000, avisoDias: 45 },
-  frenos: { avisoKm: 2000, avisoDias: 45 },
-  distribucion: { avisoKm: 5000, avisoDias: 90 },
-  bateria: { avisoDias: 60 },
-  revision_general: { avisoKm: 1500, avisoDias: 30 },
-  // Con margen para que quepa un fin de semana seco: el sellado no se puede
-  // revisar con el techo mojado.
-  sellado_techo: { avisoDias: 45 },
-  instalacion_gas: { avisoDias: 60 },
-  otro: { avisoKm: 1000, avisoDias: 30 },
+/** Iconos para elegir en una alerta propia. */
+export const ICONOS_ALERTA: readonly string[] = [
+  '🔧', '🛢️', '🌀', '🛞', '🛑', '⚙️', '🔋', '❄️', '💡', '🧽',
+  '🔎', '🛡️', '🏛️', '💧', '🔥', '⛓️', '📋', '⭐',
+];
+
+/** Dónde se apunta el coste de una alerta hecha. */
+export const APUNTES_ALERTA: Record<ApunteAlerta, Etiqueta> = {
+  mantenimiento: { clave: 'mantenimiento', nombre: 'Mantenimiento', icono: '🔧' },
+  seguro: { clave: 'seguro', nombre: 'Seguro', icono: '🛡️' },
+  impuesto_circulacion: { clave: 'impuesto_circulacion', nombre: 'Impuesto de circulación', icono: '🏛️' },
+  itv: { clave: 'itv', nombre: 'ITV', icono: '📋' },
+  parking: { clave: 'parking', nombre: 'Parking', icono: '🅿️' },
+  peajes: { clave: 'peajes', nombre: 'Peajes', icono: '🛣️' },
+  multas: { clave: 'multas', nombre: 'Multas', icono: '🚨' },
+  financiacion: { clave: 'financiacion', nombre: 'Financiación', icono: '🏦' },
+  accesorios: { clave: 'accesorios', nombre: 'Accesorios', icono: '🧰' },
+  otro: { clave: 'otro', nombre: 'Otro gasto', icono: '💶' },
 };
+
+export const ORDEN_APUNTE_ALERTA: readonly ApunteAlerta[] = [
+  'mantenimiento',
+  'itv',
+  'seguro',
+  'impuesto_circulacion',
+  'financiacion',
+  'parking',
+  'accesorios',
+  'otro',
+];
+
+/** Antelación de los avisos cuando ni la alerta ni Ajustes dicen otra cosa. */
+export const AVISO_DIAS_POR_DEFECTO = 30;
+export const AVISO_KM_POR_DEFECTO = 1000;
 
 // ---------------------------------------------------------------------------
 // Gastos
@@ -307,16 +305,6 @@ export const ORDEN_DOCUMENTO: readonly TipoDocumento[] = [
   'otro',
 ];
 
-/** Días de antelación con los que avisar de cada vencimiento documental. */
-export const ANTELACION_DOCUMENTO_DIAS: Record<TipoDocumento, number> = {
-  seguro: 30,
-  itv: 30,
-  impuesto_circulacion: 21,
-  permiso_circulacion: 30,
-  ficha_tecnica: 30,
-  otro: 15,
-};
-
 export const COBERTURAS_SEGURO: Record<CoberturaSeguro, Etiqueta> = {
   terceros: { clave: 'terceros', nombre: 'Terceros', icono: '🛡️' },
   terceros_ampliado: { clave: 'terceros_ampliado', nombre: 'Terceros ampliado', icono: '🛡️' },
@@ -331,12 +319,6 @@ export const COBERTURAS_SEGURO: Record<CoberturaSeguro, Etiqueta> = {
 // ---------------------------------------------------------------------------
 // Ayudas de presentación
 // ---------------------------------------------------------------------------
-
-/** Nombre legible de un mantenimiento, respetando el tipo personalizado. */
-export function nombreMantenimiento(tipo: TipoMantenimiento, personalizado?: string): string {
-  if (tipo === 'otro' && personalizado?.trim()) return personalizado.trim();
-  return TIPOS_MANTENIMIENTO[tipo].nombre;
-}
 
 /** Convierte un `Record<clave, Etiqueta>` en lista ordenada para un `<select>`. */
 export function opciones<K extends string>(

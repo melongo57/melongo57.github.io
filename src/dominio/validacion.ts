@@ -4,7 +4,6 @@ import type {
   FechaISO,
   PuntoOdometro,
   TipoCombustible,
-  TipoMantenimiento,
 } from './tipos.ts';
 
 /**
@@ -284,8 +283,7 @@ export interface MantenimientoAValidar {
   fecha: FechaISO;
   km?: number;
   costeCentimos: number;
-  tipo: TipoMantenimiento;
-  tipoPersonalizado?: string;
+  titulo: string;
 }
 
 /**
@@ -309,10 +307,8 @@ export function validarMantenimiento(
     incidencias.push(aviso('fecha', 'La fecha es futura. ¿Es correcta?'));
   }
 
-  if (datos.tipo === 'otro' && !datos.tipoPersonalizado?.trim()) {
-    incidencias.push(
-      error('tipoPersonalizado', 'Ponle nombre para poder darle su propia recurrencia.'),
-    );
+  if (!datos.titulo.trim()) {
+    incidencias.push(error('titulo', 'Di qué se hizo, o marca alguna alerta.'));
   }
 
   if (!Number.isFinite(datos.costeCentimos) || datos.costeCentimos < 0) {
@@ -330,37 +326,65 @@ export function validarMantenimiento(
 }
 
 // ---------------------------------------------------------------------------
-// Reglas de recurrencia
+// Alertas
 // ---------------------------------------------------------------------------
 
-export interface ReglaAValidar {
+export interface AlertaAValidar {
+  nombre: string;
   cadaKm?: number;
   cadaMeses?: number;
+  venceEl?: FechaISO;
+  ultimaFecha?: FechaISO;
+  ultimoKm?: number;
   avisoKm?: number;
   avisoDias?: number;
 }
 
-export function validarRegla(datos: ReglaAValidar): Validacion {
+export function validarAlerta(
+  datos: AlertaAValidar,
+  opciones: { hoy?: FechaISO } = {},
+): Validacion {
+  const { hoy = hoyISO() } = opciones;
   const incidencias: Incidencia[] = [];
 
-  if (datos.cadaKm === undefined && datos.cadaMeses === undefined) {
-    // Una regla que no puede vencer por nada es peor que no tenerla: da
+  if (!datos.nombre.trim()) {
+    incidencias.push(error('nombre', 'Ponle un nombre.'));
+  }
+
+  if (datos.cadaKm === undefined && datos.cadaMeses === undefined && !datos.venceEl) {
+    // Una alerta que no puede vencer por nada es peor que no tenerla: da
     // sensación de estar cubierto sin avisar jamás.
     incidencias.push(
-      error('cadaKm', 'Indica cada cuántos kilómetros, cada cuántos meses, o las dos cosas.'),
+      error('cadaKm', 'Indica cada cuántos km, cada cuántos meses o una fecha concreta.'),
     );
   }
 
   if (datos.cadaKm !== undefined && datos.cadaKm <= 0) {
-    incidencias.push(error('cadaKm', 'El intervalo tiene que ser mayor que cero.'));
+    incidencias.push(error('cadaKm', 'Tiene que ser mayor que cero.'));
   }
   if (datos.cadaMeses !== undefined && datos.cadaMeses <= 0) {
-    incidencias.push(error('cadaMeses', 'El intervalo tiene que ser mayor que cero.'));
+    incidencias.push(error('cadaMeses', 'Tiene que ser mayor que cero.'));
+  }
+
+  if (datos.venceEl !== undefined && !esFechaISO(datos.venceEl)) {
+    incidencias.push(error('venceEl', 'La fecha no es válida.'));
+  }
+
+  if (datos.ultimaFecha !== undefined) {
+    if (!esFechaISO(datos.ultimaFecha)) {
+      incidencias.push(error('ultimaFecha', 'La fecha no es válida.'));
+    } else if (datos.ultimaFecha > hoy) {
+      incidencias.push(aviso('ultimaFecha', 'La última vez está en el futuro. ¿Es correcto?'));
+    }
+  }
+
+  if (datos.ultimoKm !== undefined && datos.ultimoKm < 0) {
+    incidencias.push(error('ultimoKm', 'Los kilómetros no pueden ser negativos.'));
   }
 
   if (datos.avisoKm !== undefined && datos.cadaKm !== undefined && datos.avisoKm >= datos.cadaKm) {
     incidencias.push(
-      aviso('avisoKm', 'Avisarías desde el día siguiente al último cambio. ¿Es lo que quieres?'),
+      aviso('avisoKm', 'Avisarías desde el mismo día en que lo haces. ¿Es lo que quieres?'),
     );
   }
 

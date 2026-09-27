@@ -17,7 +17,7 @@ import type {
   OrigenLectura,
   PuntoOdometro,
   Repostaje,
-  ReglaMantenimiento,
+  Alerta,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 import { ajustesPorDefecto } from './ajustesPorDefecto.ts';
@@ -183,7 +183,10 @@ function crearColeccionAjustes(tabla: () => Table<Ajustes, Id>): ColeccionAjuste
      * primera vez que el usuario cambia algo, que es cuando toca escribir.
      */
     async obtener() {
-      return (await tabla().get(ID_AJUSTES)) ?? ajustesPorDefecto();
+      // Mezclados con los de partida: unos ajustes guardados por una versión
+      // anterior pueden no traer un campo que se añadió después.
+      const guardados = await tabla().get(ID_AJUSTES);
+      return guardados ? { ...ajustesPorDefecto(), ...guardados } : ajustesPorDefecto();
     },
     async guardar(cambios: Cambios<Ajustes>) {
       const actuales = await this.obtener();
@@ -217,8 +220,8 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
     mantenimientos: conFecha<Mantenimiento>(
       () => base.mantenimientos as unknown as Table<Mantenimiento, Id>,
     ),
-    reglas: crearColeccionDeVehiculo<ReglaMantenimiento>(
-      () => base.reglas as unknown as Table<ReglaMantenimiento, Id>,
+    alertas: crearColeccionDeVehiculo<Alerta>(
+      () => base.alertas as unknown as Table<Alerta, Id>,
       { ordenarPorFecha: false },
     ),
     repostajes: conFecha<Repostaje>(() => base.repostajes as unknown as Table<Repostaje, Id>),
@@ -279,7 +282,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
           base.vehiculos,
           base.lecturas,
           base.mantenimientos,
-          base.reglas,
+          base.alertas,
           base.repostajes,
           base.gastos,
           base.documentos,
@@ -288,11 +291,11 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
         async () => {
           const vehiculo = await base.vehiculos.get(vehiculoId);
 
-          const [lecturas, mantenimientos, reglas, repostajes, gastos, documentos] =
+          const [lecturas, mantenimientos, alertas, repostajes, gastos, documentos] =
             await Promise.all([
               base.lecturas.where('vehiculoId').equals(vehiculoId).toArray(),
               base.mantenimientos.where('vehiculoId').equals(vehiculoId).toArray(),
-              base.reglas.where('vehiculoId').equals(vehiculoId).toArray(),
+              base.alertas.where('vehiculoId').equals(vehiculoId).toArray(),
               base.repostajes.where('vehiculoId').equals(vehiculoId).toArray(),
               base.gastos.where('vehiculoId').equals(vehiculoId).toArray(),
               base.documentos.where('vehiculoId').equals(vehiculoId).toArray(),
@@ -315,7 +318,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
           await Promise.all([
             marcarBorrados(base.lecturas, lecturas, ahora),
             marcarBorrados(base.mantenimientos, mantenimientos, ahora),
-            marcarBorrados(base.reglas, reglas, ahora),
+            marcarBorrados(base.alertas, alertas, ahora),
             marcarBorrados(base.repostajes, repostajes, ahora),
             marcarBorrados(base.gastos, gastos, ahora),
             marcarBorrados(base.documentos, documentos, ahora),
@@ -345,7 +348,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
           vehiculos,
           lecturas,
           mantenimientos,
-          reglas,
+          alertas,
           repostajes,
           gastos,
           documentos,
@@ -354,7 +357,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
           base.vehiculos.toArray(),
           base.lecturas.toArray(),
           base.mantenimientos.toArray(),
-          base.reglas.toArray(),
+          base.alertas.toArray(),
           base.repostajes.toArray(),
           base.gastos.toArray(),
           base.documentos.toArray(),
@@ -365,7 +368,7 @@ export function crearRepositorioDexie(base: BaseDatosGaraje = dbGlobal): Reposit
           marcarBorrados(base.vehiculos, vehiculos, ahora),
           marcarBorrados(base.lecturas, lecturas, ahora),
           marcarBorrados(base.mantenimientos, mantenimientos, ahora),
-          marcarBorrados(base.reglas, reglas, ahora),
+          marcarBorrados(base.alertas, alertas, ahora),
           marcarBorrados(base.repostajes, repostajes, ahora),
           marcarBorrados(base.gastos, gastos, ahora),
           marcarBorrados(base.documentos, documentos, ahora),

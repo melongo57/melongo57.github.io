@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { COBERTURAS_SEGURO, TIPOS_DOCUMENTO } from '@/dominio/catalogos.ts';
 import { formatearEuros } from '@/dominio/dinero.ts';
-import { formatearDistancia, formatearFecha, diasEntre, hoyISO } from '@/dominio/fechas.ts';
+import { formatearFecha } from '@/dominio/fechas.ts';
 import type { Documento } from '@/dominio/tipos.ts';
 import { Boton, EnlaceBoton } from '../componentes/Boton.tsx';
 import { FormularioDocumento } from '../componentes/FormularioDocumento.tsx';
@@ -34,7 +34,6 @@ export function Documentos(): React.JSX.Element {
   const vehiculo = useVehiculo(id);
   const documentos = useDocumentos(id);
   const [edicion, setEdicion] = useState<Edicion>({ modo: 'cerrado' });
-  const hoy = hoyISO();
 
   if (vehiculo === null) {
     return (
@@ -70,8 +69,9 @@ export function Documentos(): React.JSX.Element {
           </p>
           <h2>Todavía no hay ningún documento</h2>
           <p>
-            El seguro, la ITV, el permiso de circulación. Con su fecha de vencimiento
-            aparecerán en el panel con su semáforo, y podrás llevártelos al calendario.
+            La póliza del seguro, el informe de la ITV, el permiso de circulación: los datos
+            y las fotos, a mano. Los avisos de cuándo vencen se ponen como alertas en la
+            ficha del vehículo.
           </p>
           <Boton variante="principal" icono="＋" alPulsar={() => setEdicion({ modo: 'nuevo' })}>
             Añadir el primero
@@ -80,15 +80,13 @@ export function Documentos(): React.JSX.Element {
       ) : (
         <ul className="documentos__lista">
           {documentos.map((d) => {
-            const dias = d.fechaVencimiento ? diasEntre(hoy, d.fechaVencimiento) : null;
-            const estado = dias === null ? 'sin' : dias < 0 ? 'vencido' : dias <= 30 ? 'proximo' : 'ok';
             const detalle = detalleDe(d);
 
             return (
               <li key={d.id}>
                 <button
                   type="button"
-                  className={`doc-fila es-${estado}`}
+                  className="doc-fila es-sin"
                   onClick={() => setEdicion({ modo: 'editar', registro: d })}
                 >
                   <span className="doc-fila__icono" aria-hidden="true">
@@ -107,16 +105,11 @@ export function Documentos(): React.JSX.Element {
                   </span>
 
                   <span className="doc-fila__derecha">
-                    {d.fechaVencimiento ? (
-                      <>
-                        <span className="doc-fila__fecha numero">
-                          {formatearFecha(d.fechaVencimiento)}
-                        </span>
-                        <span className="doc-fila__plazo">{formatearDistancia(dias!)}</span>
-                      </>
-                    ) : (
-                      <span className="doc-fila__plazo">No caduca</span>
-                    )}
+                    {d.fechaEmision ? (
+                      <span className="doc-fila__fecha numero">
+                        {formatearFecha(d.fechaEmision)}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
               </li>

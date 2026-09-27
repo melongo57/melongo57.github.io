@@ -1,0 +1,66 @@
+.gestor-alertas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.gestor-alertas__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.gestor-alertas__cabecera h2 {
+  font-size: var(--t-lg);
+}
+
+.gestor-alertas__vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border: 1px dashed var(--c-borde-fuerte);
+  border-radius: var(--r-lg);
+  color: var(--c-texto-suave);
+}
+
+.gestor-alertas__aldia {
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-md);
+  background: var(--c-ok-fondo);
+  border: 1px solid var(--c-ok-borde);
+  color: var(--c-ok);
+  font-weight: 650;
+}
+
+.gestor-alertas__resto > summary {
+  cursor: pointer;
+  padding: var(--e-2) 0;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  color: var(--c-texto-suave);
+  list-style: none;
+}
+
+.gestor-alertas__resto > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gestor-alertas__resto > summary::before {
+  content: '▸ ';
+}
+
+.gestor-alertas__resto[open] > summary {
+  margin-bottom: var(--e-2);
+}
+
+.gestor-alertas__resto[open] > summary::before {
+  content: '▾ ';
+}
+
+.gestor-alertas__pista {
+  font-size: var(--t-xs);
+  color: var(--c-texto-tenue);
+}

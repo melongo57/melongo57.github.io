@@ -1,0 +1,110 @@
+.form-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.form-alerta__sugerencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding-bottom: var(--e-4);
+  border-bottom: 1px solid var(--c-borde);
+}
+
+.form-alerta__pregunta,
+.form-alerta__subtitulo {
+  font-size: var(--t-sm);
+  font-weight: 650;
+  color: var(--c-texto-suave);
+}
+
+.form-alerta__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form-alerta__grupo > legend {
+  padding: 0;
+  margin-bottom: var(--e-2);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.form-alerta__ayuda {
+  margin-top: calc(-1 * var(--e-2));
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.form-alerta__enlace {
+  align-self: flex-start;
+  padding: var(--e-1) 0;
+  border: none;
+  background: none;
+  color: var(--c-acento);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.form-alerta__atajos {
+  align-items: center;
+}
+
+.form-alerta__km {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.form-alerta__prevision {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-acento-suave);
+  border: 1px solid var(--c-acento-borde);
+  color: var(--c-acento);
+  font-size: var(--t-sm);
+  font-weight: 650;
+}
+
+.form-alerta__iconos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.opcion--icono {
+  width: 44px;
+  justify-content: center;
+  padding: 0;
+  font-size: 1.2rem;
+}
+
+.form-alerta__fallo,
+.form-alerta__confirmar {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.form-alerta__fallo {
+  color: var(--c-alerta);
+}
+
+.form-alerta__confirmar {
+  color: var(--c-aviso);
+}
+
+.form-alerta__borrar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--c-borde);
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}

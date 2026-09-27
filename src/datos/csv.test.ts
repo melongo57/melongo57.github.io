@@ -44,12 +44,12 @@ const MANTENIMIENTO = {
   creadoEn: '',
   actualizadoEn: '',
   vehiculoId: 'v1',
-  tipo: 'aceite',
+  titulo: 'Cambio de aceite',
+  alertaIds: [],
   fecha: '2026-01-10',
   km: 120000,
   taller: 'Talleres Muñoz',
   costeCentimos: 9640,
-  piezas: ['Aceite 5W30', 'Filtro'],
   adjuntoIds: [],
 } as Mantenimiento;
 

@@ -13,12 +13,12 @@ import { ahoraISO } from '@/dominio/fechas.ts';
 import { ID_AJUSTES } from '@/dominio/tipos.ts';
 import type {
   Adjunto,
+  Alerta,
   EntidadBase,
   Gasto,
   LecturaOdometro,
   Mantenimiento,
   Repostaje,
-  ReglaMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 
@@ -76,7 +76,31 @@ function marcarSincronizado(): void {
 // Tablas de forma sencilla: mismas columnas a los dos lados
 // ---------------------------------------------------------------------------
 
-type TablaGenerica = 'vehiculos' | 'lecturas' | 'mantenimientos' | 'reglas' | 'repostajes' | 'gastos';
+type TablaGenerica = 'vehiculos' | 'lecturas' | 'mantenimientos' | 'alertas' | 'repostajes' | 'gastos';
+
+/**
+ * Campos opcionales que se mandan como NULL cuando faltan.
+ *
+ * `filaDesdeRegistro` se salta los `undefined`, y un upsert que no menciona
+ * una columna la deja como estaba. Para la mayoría de campos da igual, pero
+ * en las alertas vaciar un campo es un gesto normal —marcar una alerta como
+ * hecha borra su fecha fija—: si no se manda el NULL, el servidor conserva la
+ * fecha vieja y el otro móvil la vuelve a ver.
+ */
+const COLUMNAS_ANULABLES: Partial<Record<TablaGenerica, readonly string[]>> = {
+  alertas: ['cadaKm', 'cadaMeses', 'venceEl', 'ultimaFecha', 'ultimoKm', 'avisoDias', 'avisoKm', 'notas'],
+};
+
+/**
+ * Relleno de campos que una fila escrita por una versión anterior puede no
+ * traer. Sin él, un mantenimiento sin `alertaIds` revienta la lista entera.
+ */
+function normalizar(tabla: TablaGenerica, registro: Record<string, unknown>): Record<string, unknown> {
+  if (tabla === 'mantenimientos') {
+    return { titulo: '', alertaIds: [], adjuntoIds: [], ...registro };
+  }
+  return registro;
+}
 
 async function sincronizarTablaGenerica<T extends EntidadBase>(
   tabla: TablaGenerica,
@@ -88,7 +112,9 @@ async function sincronizarTablaGenerica<T extends EntidadBase>(
 
   const { data, error } = await cliente.from(tabla).select('*');
   if (error) throw new Error(`No se pudo leer «${tabla}»: ${error.message}`);
-  const remotos = (data ?? []).map((fila) => registroDesdeFila<T>(fila));
+  const remotos = (data ?? []).map(
+    (fila) => normalizar(tabla, registroDesdeFila<Record<string, unknown>>(fila)) as unknown as T,
+  );
 
   const plan = planificarSincronizacion(locales, remotos);
 
@@ -109,7 +135,12 @@ async function sincronizarTablaGenerica<T extends EntidadBase>(
 
   if (plan.aEmpujar.length > 0) {
     const filas = plan.aEmpujar.map((r) =>
-      filaDesdeRegistro(r as unknown as Record<string, unknown>, propietarioId),
+      filaDesdeRegistro(
+        r as unknown as Record<string, unknown>,
+        propietarioId,
+        [],
+        COLUMNAS_ANULABLES[tabla] ?? [],
+      ),
     );
     const { error: errorPush } = await cliente.from(tabla).upsert(filas, { onConflict: 'id' });
     if (errorPush) throw new Error(`No se pudo escribir en «${tabla}»: ${errorPush.message}`);
@@ -277,12 +308,26 @@ export async function sincronizarTodo(): Promise<ResultadoSincronizacion> {
   } = await cliente.auth.getUser();
   if (!user) return { ok: false, error: 'No has iniciado sesión.' };
 
+  /*
+   * Antes de mover nada, comprobar que el servidor tiene ya la tabla de
+   * alertas. Si no la tiene, sigue con el esquema anterior y todavía guarda
+   * los datos viejos: bajarlos a una base recién vaciada los resucitaría, y
+   * al vaciar después el servidor se volverían a subir desde aquí.
+   */
+  const { error: sinAlertas } = await cliente.from('alertas').select('id').limit(1);
+  if (sinAlertas) {
+    return {
+      ok: false,
+      error: 'El servidor aún no está actualizado a la nueva versión. Tus datos siguen en este dispositivo.',
+    };
+  }
+
   try {
     const detalle: Record<string, ResultadoTabla> = {
       vehiculos: await sincronizarTablaGenerica<Vehiculo>('vehiculos', user.id),
       lecturas: await sincronizarTablaGenerica<LecturaOdometro>('lecturas', user.id),
       mantenimientos: await sincronizarTablaGenerica<Mantenimiento>('mantenimientos', user.id),
-      reglas: await sincronizarTablaGenerica<ReglaMantenimiento>('reglas', user.id),
+      alertas: await sincronizarTablaGenerica<Alerta>('alertas', user.id),
       repostajes: await sincronizarTablaGenerica<Repostaje>('repostajes', user.id),
       gastos: await sincronizarTablaGenerica<Gasto>('gastos', user.id),
       documentos: await sincronizarDocumentos(user.id),

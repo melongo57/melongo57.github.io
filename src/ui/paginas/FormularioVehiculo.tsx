@@ -8,6 +8,7 @@ import {
   COMBUSTIBLES,
   ORDEN_CATEGORIA_VEHICULO,
   opciones,
+  sugerenciasAlerta,
 } from '@/dominio/catalogos.ts';
 import { parsearImporte } from '@/dominio/dinero.ts';
 import { hoyISO } from '@/dominio/fechas.ts';
@@ -145,6 +146,26 @@ export function FormularioVehiculo(): React.JSX.Element {
   const [tocados, setTocados] = useState<ReadonlySet<string>>(new Set());
   const [intentado, setIntentado] = useState(false);
 
+  /*
+   * Alertas de partida, solo al dar de alta. Mientras el usuario no toque la
+   * lista (`null`), se marcan las básicas de la categoría elegida y siguen a
+   * la categoría si cambia; en cuanto marca o desmarca una, manda su lista.
+   */
+  const sugerencias = useMemo(
+    () => sugerenciasAlerta(datos.categoria, datos.combustible),
+    [datos.categoria, datos.combustible],
+  );
+  const [alertasElegidas, setAlertasElegidas] = useState<ReadonlySet<string> | null>(null);
+  const elegidas =
+    alertasElegidas ?? new Set(sugerencias.filter((s) => s.basica).map((s) => s.clave));
+
+  function alternarAlerta(clave: string): void {
+    const siguiente = new Set(elegidas);
+    if (siguiente.has(clave)) siguiente.delete(clave);
+    else siguiente.add(clave);
+    setAlertasElegidas(siguiente);
+  }
+
   useEffect(() => {
     if (!foto) {
       setPrevisualizacion(null);
@@ -253,7 +274,12 @@ export function FormularioVehiculo(): React.JSX.Element {
         await actualizarVehiculo(id, { ...comun, foto, quitarFoto });
         navegar(`/vehiculos/${id}`, { replace: true });
       } else {
-        const creado = await crearVehiculo({ ...comun, orden: 0, foto });
+        const creado = await crearVehiculo({
+          ...comun,
+          orden: 0,
+          foto,
+          alertas: sugerencias.filter((s) => elegidas.has(s.clave)).map((s) => s.clave),
+        });
         navegar(`/vehiculos/${creado.id}`, { replace: true });
       }
     } catch (error) {
@@ -424,6 +450,34 @@ export function FormularioVehiculo(): React.JSX.Element {
             />
           </div>
         </section>
+
+        {/* ---------------------------------------------------------------- */}
+        {!editando ? (
+          <section className="bloque">
+            <h2 className="bloque__titulo">Alertas</h2>
+            <p className="form-vehiculo__ayuda">
+              Marca lo que quieres que te avise. Luego podrás añadir, cambiar o quitar
+              cualquiera desde la ficha, y decir cuándo fue la última vez.
+            </p>
+            <div className="opciones">
+              {sugerencias.map((s) => {
+                const marcada = elegidas.has(s.clave);
+                return (
+                  <button
+                    key={s.clave}
+                    type="button"
+                    className="opcion"
+                    aria-pressed={marcada}
+                    onClick={() => alternarAlerta(s.clave)}
+                  >
+                    <span aria-hidden="true">{marcada ? '✓' : s.icono}</span>
+                    {s.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {/* ---------------------------------------------------------------- */}
         <section className="bloque">

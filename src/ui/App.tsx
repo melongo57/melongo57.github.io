@@ -1,4 +1,4 @@
-import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter, Routes, useParams } from 'react-router-dom';
 import { useSesion } from './autenticacion.ts';
 import { useSincronizacionAutomatica } from './ganchos/sincronizacionAutomatica.ts';
 import { Disposicion } from './layout/Disposicion.tsx';
@@ -12,8 +12,13 @@ import { ListaVehiculos } from './paginas/ListaVehiculos.tsx';
 import { Gastos } from './paginas/Gastos.tsx';
 import { Mantenimientos } from './paginas/Mantenimientos.tsx';
 import { Repostajes } from './paginas/Repostajes.tsx';
-import { Reglas } from './paginas/Reglas.tsx';
 import { Panel } from './paginas/Panel.tsx';
+
+/** Un enlace guardado a la vieja pantalla de reglas lleva a la ficha. */
+function RedirigirAFicha(): React.JSX.Element {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/vehiculos/${id ?? ''}`} replace />;
+}
 
 /**
  * Rutas de la aplicación.
@@ -39,7 +44,8 @@ export function App(): React.JSX.Element {
           <Route path="/vehiculos/:id" element={<FichaVehiculo />} />
           <Route path="/vehiculos/:id/editar" element={<FormularioVehiculo />} />
           <Route path="/vehiculos/:id/mantenimientos" element={<Mantenimientos />} />
-          <Route path="/vehiculos/:id/reglas" element={<Reglas />} />
+          {/* La antigua pantalla de recurrencias: ahora las alertas viven en la ficha. */}
+          <Route path="/vehiculos/:id/reglas" element={<RedirigirAFicha />} />
           <Route path="/vehiculos/:id/repostajes" element={<Repostajes />} />
           <Route path="/vehiculos/:id/gastos" element={<Gastos />} />
           <Route path="/vehiculos/:id/documentos" element={<Documentos />} />

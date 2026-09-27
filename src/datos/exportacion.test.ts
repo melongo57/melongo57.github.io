@@ -128,6 +128,12 @@ describe('validarCopia', () => {
     expect(() => validarCopia({ ...valida, version: VERSION_FORMATO + 1 })).toThrow(/más nueva/);
   });
 
+  it('rechaza con un mensaje claro una copia de antes de las alertas', () => {
+    // Sus mantenimientos no tienen título ni alertas y sus reglas no encajan
+    // en ninguna tabla: importarla a medias sería peor que no importarla.
+    expect(() => validarCopia({ ...valida, version: 1 })).toThrow(/versión anterior/);
+  });
+
   it('rechaza una tabla corrupta', () => {
     expect(() => validarCopia({ ...valida, datos: { vehiculos: 'no es una lista' } })).toThrow(
       CopiaInvalida,
@@ -147,7 +153,7 @@ describe('importarTodo', () => {
     const base = baseFalsa({ vehiculos: [{ id: 'viejo' }] });
     const copia = validarCopia({
       formato: 'mi-garaje',
-      version: 1,
+      version: VERSION_FORMATO,
       exportadoEn: '',
       resumen: {},
       datos: { vehiculos: [{ id: 'nuevo' }], gastos: [{ id: 'g1' }] },
@@ -166,7 +172,7 @@ describe('importarTodo', () => {
     const base = baseFalsa({ vehiculos: [{ id: 'v1' }], gastos: [{ id: 'g1' }] });
     const copia = validarCopia({
       formato: 'mi-garaje',
-      version: 1,
+      version: VERSION_FORMATO,
       exportadoEn: '',
       resumen: {},
       datos: { vehiculos: [{ id: 'v2' }] },

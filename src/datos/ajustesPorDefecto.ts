@@ -1,4 +1,4 @@
-import { ANTELACION_DOCUMENTO_DIAS, ANTELACION_MANTENIMIENTO } from '@/dominio/catalogos.ts';
+import { AVISO_DIAS_POR_DEFECTO, AVISO_KM_POR_DEFECTO } from '@/dominio/catalogos.ts';
 import { ahoraISO } from '@/dominio/fechas.ts';
 import { ID_AJUSTES, type Ajustes } from '@/dominio/tipos.ts';
 
@@ -12,8 +12,8 @@ export function ajustesPorDefecto(): Ajustes {
     borradoEn: null,
     propietarioId: null,
     tema: 'sistema',
-    antelacionMantenimiento: structuredClone(ANTELACION_MANTENIMIENTO),
-    antelacionDocumentoDias: { ...ANTELACION_DOCUMENTO_DIAS },
+    avisoDias: AVISO_DIAS_POR_DEFECTO,
+    avisoKm: AVISO_KM_POR_DEFECTO,
     notificacionesActivadas: false,
   };
 }

@@ -32,7 +32,7 @@ const NOMBRES_TABLA: Record<string, string> = {
   vehiculos: 'vehículos',
   lecturas: 'lecturas',
   mantenimientos: 'mantenimientos',
-  reglas: 'reglas',
+  alertas: 'alertas',
   repostajes: 'repostajes',
   gastos: 'gastos',
   documentos: 'documentos',

@@ -1,0 +1,160 @@
+/*
+ * Botón flotante «＋». En el móvil va encima de la barra inferior, a la
+ * derecha, donde cae el pulgar de la mano derecha; en escritorio, en la
+ * esquina.
+ */
+.accion-rapida__boton {
+  position: fixed;
+  right: var(--e-4);
+  bottom: calc(var(--alto-barra) + var(--e-4) + var(--seguro-abajo));
+  z-index: 25;
+
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--c-acento);
+  color: var(--c-sobre-acento);
+  font-size: 1.9rem;
+  font-weight: 400;
+  line-height: 1;
+  box-shadow: var(--sombra-3);
+  cursor: pointer;
+  transition:
+    transform var(--transicion),
+    background var(--transicion);
+}
+
+.accion-rapida__boton:hover {
+  background: var(--c-acento-fuerte);
+}
+
+.accion-rapida__boton:active {
+  transform: scale(0.95);
+}
+
+.accion-rapida__boton:focus-visible {
+  outline: 3px solid var(--c-acento-borde);
+  outline-offset: 3px;
+}
+
+@media (min-width: 700px) {
+  .accion-rapida__boton {
+    bottom: var(--e-5);
+    right: var(--e-5);
+  }
+}
+
+.accion-rapida,
+.accion-rapida__paso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.accion-rapida__lista,
+.accion-rapida__alertas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accion-rapida__accion,
+.accion-rapida__alerta {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--c-borde);
+  border-radius: var(--r-lg);
+  background: var(--c-superficie);
+  color: var(--c-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--transicion),
+    background var(--transicion);
+}
+
+.accion-rapida__accion:hover,
+.accion-rapida__alerta:hover {
+  border-color: var(--c-acento);
+  background: var(--c-acento-suave);
+}
+
+.accion-rapida__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+  font-size: 1.35rem;
+}
+
+.accion-rapida__texto {
+  display: flex;
+  flex-direction: column;
+}
+
+.accion-rapida__nombre {
+  font-weight: 700;
+  font-size: var(--t-md);
+}
+
+.accion-rapida__detalle {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.accion-rapida__atras {
+  align-self: flex-start;
+  padding: var(--e-1) 0;
+  border: none;
+  background: none;
+  color: var(--c-acento);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.accion-rapida__alerta {
+  min-height: 56px;
+  border-left-width: 4px;
+}
+
+.accion-rapida__alerta.es-vencido {
+  border-left-color: var(--c-alerta);
+}
+
+.accion-rapida__alerta.es-proximo {
+  border-left-color: var(--c-aviso);
+}
+
+.accion-rapida__alerta.es-ok {
+  border-left-color: var(--c-ok);
+}
+
+.accion-rapida__alerta-nombre {
+  flex: 1;
+  font-weight: 650;
+}
+
+.accion-rapida__alerta-resto {
+  font-size: var(--t-sm);
+  color: var(--c-texto-tenue);
+}
+
+.accion-rapida__vacio {
+  color: var(--c-texto-suave);
+}

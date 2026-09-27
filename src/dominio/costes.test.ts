@@ -58,10 +58,10 @@ function mantenimiento(fecha: string, euros: number): Mantenimiento {
     creadoEn: '',
     actualizadoEn: '',
     vehiculoId: 'v1',
-    tipo: 'aceite',
+    titulo: 'Cambio de aceite',
+    alertaIds: [],
     fecha,
     costeCentimos: Math.round(euros * 100),
-    piezas: [],
     adjuntoIds: [],
   };
 }

@@ -12,7 +12,7 @@ import type {
   Nuevo,
   PuntoOdometro,
   Repostaje,
-  ReglaMantenimiento,
+  Alerta,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 
@@ -50,7 +50,7 @@ export interface Repositorio {
   readonly vehiculos: Coleccion<Vehiculo>;
   readonly lecturas: ColeccionDeVehiculo<LecturaOdometro>;
   readonly mantenimientos: ColeccionDeVehiculo<Mantenimiento>;
-  readonly reglas: ColeccionDeVehiculo<ReglaMantenimiento>;
+  readonly alertas: ColeccionDeVehiculo<Alerta>;
   readonly repostajes: ColeccionDeVehiculo<Repostaje>;
   readonly gastos: ColeccionDeVehiculo<Gasto>;
   readonly documentos: ColeccionDeVehiculo<Documento>;

@@ -5,16 +5,42 @@
 }
 
 .vencimiento {
-  display: flex;
-  align-items: center;
-  gap: var(--e-3);
-  padding: var(--e-3);
   border-radius: var(--r-md);
   border: 1px solid var(--c-borde);
   background: var(--c-superficie-2);
+  overflow: hidden;
 }
 
-.vencimiento.es-compacta {
+/* La fila entera es el objetivo táctil: tocarla abre la alerta. */
+.vencimiento__boton {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  width: 100%;
+  min-height: var(--tactil);
+  padding: var(--e-3);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.vencimiento__boton {
+  cursor: pointer;
+  transition: background var(--transicion);
+}
+
+button.vencimiento__boton:hover {
+  background: color-mix(in srgb, var(--c-texto) 4%, transparent);
+}
+
+button.vencimiento__boton:focus-visible {
+  outline: 2px solid var(--c-acento);
+  outline-offset: -2px;
+}
+
+.vencimiento.es-compacta .vencimiento__boton {
   padding: var(--e-2) var(--e-3);
 }
 

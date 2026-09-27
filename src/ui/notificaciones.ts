@@ -79,9 +79,9 @@ export function seleccionarAvisos(
 ): Vencimiento[] {
   return vencimientos
     .filter((v) => v.semaforo === 'vencido' || v.semaforo === 'proximo')
-    // Lo que no se ha registrado nunca no merece una notificación: es un hueco
-    // en el histórico, no una tarea con fecha.
-    .filter((v) => !(v.origen.clase === 'mantenimiento' && v.origen.sinRegistroPrevio))
+    // Una alerta sin última vez no merece una notificación: es un dato que
+    // falta, no una tarea con fecha.
+    .filter((v) => !v.faltaUltimaVez)
     // Una vez al día como mucho. Repetir el mismo aviso cada vez que abres la
     // app es la forma más rápida de que se desactiven las notificaciones.
     .filter((v) => avisados[v.id] !== hoy)

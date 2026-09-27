@@ -30,24 +30,22 @@ import {
 } from '@/dominio/calendario.ts';
 import { estacionesFrecuentes } from '@/datos/acciones.ts';
 import type {
+  Alerta,
   Centimos,
   Documento,
   Gasto,
   Id,
   Mantenimiento,
   PuntoOdometro,
-  ReglaMantenimiento,
   Repostaje,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 
 /** Todo lo que el motor de vencimientos necesita leer de un vehículo. */
 async function cargarParaVencimientos(vehiculo: Vehiculo) {
-  const [puntos, reglas, mantenimientos, documentos, ajustes] = await Promise.all([
+  const [puntos, alertas, ajustes] = await Promise.all([
     repo.puntosOdometro(vehiculo.id),
-    repo.reglas.listarPorVehiculo(vehiculo.id),
-    repo.mantenimientos.listarPorVehiculo(vehiculo.id),
-    repo.documentos.listarPorVehiculo(vehiculo.id),
+    repo.alertas.listarPorVehiculo(vehiculo.id),
     repo.ajustes.obtener(),
   ]);
 
@@ -55,14 +53,8 @@ async function cargarParaVencimientos(vehiculo: Vehiculo) {
   return {
     puntos,
     estimacion,
-    vencimientos: calcularVencimientos({
-      vehiculo,
-      reglas,
-      mantenimientos,
-      documentos,
-      estimacion,
-      ajustes,
-    }),
+    alertas,
+    vencimientos: calcularVencimientos({ vehiculo, alertas, estimacion, ajustes }),
   };
 }
 
@@ -173,6 +165,7 @@ export interface DetalleVehiculo {
   puntos: PuntoOdometro[];
   estimacion: EstimacionKm;
   kmAlAnio: number;
+  alertas: Alerta[];
   vencimientos: Vencimiento[];
   totales: {
     repostajes: number;
@@ -190,7 +183,7 @@ export function useDetalleVehiculo(id: Id | undefined): DetalleVehiculo | undefi
     if (!vehiculo) return null;
 
     const [
-      { puntos, estimacion, vencimientos },
+      { puntos, estimacion, alertas, vencimientos },
       repostajesConBorrados,
       mantenimientosConBorrados,
       gastosConBorrados,
@@ -211,6 +204,7 @@ export function useDetalleVehiculo(id: Id | undefined): DetalleVehiculo | undefi
       puntos,
       estimacion,
       kmAlAnio: kmAnuales(puntos),
+      alertas,
       vencimientos,
       totales: {
         repostajes: repostajes.length,
@@ -248,10 +242,11 @@ export function useMantenimientos(vehiculoId: Id | undefined): Mantenimiento[] |
   }, [vehiculoId]);
 }
 
-export function useReglas(vehiculoId: Id | undefined): ReglaMantenimiento[] | undefined {
+export function useAlertas(vehiculoId: Id | undefined): Alerta[] | undefined {
   return useLiveQuery(async () => {
     if (!vehiculoId) return [];
-    return repo.reglas.listarPorVehiculo(vehiculoId);
+    const lista = await repo.alertas.listarPorVehiculo(vehiculoId);
+    return lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }, [vehiculoId]);
 }
 

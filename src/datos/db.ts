@@ -2,13 +2,13 @@ import Dexie, { type EntityTable } from 'dexie';
 import type {
   Adjunto,
   Ajustes,
+  Alerta,
   Documento,
   EntidadBase,
   Gasto,
   LecturaOdometro,
   Mantenimiento,
   Repostaje,
-  ReglaMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 
@@ -48,16 +48,15 @@ export function estaVivo<T extends EntidadBase>(registro: T | undefined): T | un
  * Los índices compuestos `[vehiculoId+fecha]` son los que sostienen la app:
  * casi todas las consultas son "lo de este vehículo, ordenado por fecha".
  *
- * OJO: IndexedDB no indexa valores `undefined`. Un documento sin
- * `fechaVencimiento` no aparece en el índice `fechaVencimiento`, que es
- * exactamente lo que queremos (un permiso de circulación no caduca), pero hay
- * que recordarlo antes de dar por buena una consulta por ese índice.
+ * OJO: IndexedDB no indexa valores `undefined`: un registro sin el campo no
+ * aparece en el índice de ese campo. Hay que recordarlo antes de dar por buena
+ * una consulta por un índice de un campo opcional.
  */
 export class BaseDatosGaraje extends Dexie {
   vehiculos!: EntityTable<Vehiculo, 'id'>;
   lecturas!: EntityTable<LecturaOdometro, 'id'>;
   mantenimientos!: EntityTable<Mantenimiento, 'id'>;
-  reglas!: EntityTable<ReglaMantenimiento, 'id'>;
+  alertas!: EntityTable<Alerta, 'id'>;
   repostajes!: EntityTable<Repostaje, 'id'>;
   gastos!: EntityTable<Gasto, 'id'>;
   documentos!: EntityTable<Documento, 'id'>;
@@ -97,6 +96,41 @@ export class BaseDatosGaraje extends Dexie {
           vehiculo.categoria ??= 'turismo';
         });
     });
+
+    /*
+     * v3 — las reglas de tipo fijo se sustituyen por alertas libres, los
+     * mantenimientos pasan a tener título y alertas cubiertas, y la caducidad
+     * sale de los documentos para vivir en las alertas.
+     *
+     * No se migran los datos: se borran. Fue una decisión explícita del
+     * usuario («me da igual que borres los datos, lo estaba probando»), y
+     * convertir reglas a alertas en cada dispositivo por separado habría
+     * generado alertas duplicadas al sincronizar, con ids distintos para la
+     * misma cosa. Una base vacía y el servidor vaciado a la vez es lo único
+     * que no deja restos.
+     */
+    this.version(3)
+      .stores({
+        mantenimientos: 'id, vehiculoId, fecha, [vehiculoId+fecha]',
+        reglas: null,
+        alertas: 'id, vehiculoId',
+        documentos: 'id, vehiculoId, tipo, [vehiculoId+tipo]',
+      })
+      .upgrade(async (tx) => {
+        await Promise.all(
+          [
+            'vehiculos',
+            'lecturas',
+            'mantenimientos',
+            'alertas',
+            'repostajes',
+            'gastos',
+            'documentos',
+            'adjuntos',
+            'ajustes',
+          ].map((tabla) => tx.table(tabla).clear()),
+        );
+      });
   }
 }
 
@@ -107,8 +141,8 @@ export const db = new BaseDatosGaraje();
 export const TABLAS_DATOS = [
   'vehiculos',
   'lecturas',
+  'alertas',
   'mantenimientos',
-  'reglas',
   'repostajes',
   'gastos',
   'documentos',

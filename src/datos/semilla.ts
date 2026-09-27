@@ -1,15 +1,19 @@
 import { aCentimos } from '@/dominio/dinero.ts';
 import { hoyISO, sumarDias, sumarMeses } from '@/dominio/fechas.ts';
 import { kmEnFecha, type HitoOdometro } from '@/dominio/odometro.ts';
+import { sugerenciasAlerta } from '@/dominio/catalogos.ts';
 import type {
+  Alerta,
   Centimos,
   FechaISO,
   Id,
+  Mantenimiento,
   Nuevo,
   Repostaje,
   UnidadEnergia,
+  Vehiculo,
 } from '@/dominio/tipos.ts';
-import { crearReglasPorDefecto } from './acciones.ts';
+import { alertaDesdeSugerencia } from './acciones.ts';
 import type { Repositorio } from './repositorio.ts';
 
 /**
@@ -204,6 +208,39 @@ function enFecha(serie: readonly HitoOdometro[], fecha: FechaISO): number {
 
 const euros = (valor: number): Centimos => aCentimos(valor);
 
+/** Una alerta del catálogo del vehículo, como la elegiría el usuario al darlo de alta. */
+async function alertaSugerida(
+  repo: Repositorio,
+  vehiculo: Vehiculo,
+  clave: string,
+  extra: Partial<Nuevo<Alerta>> = {},
+): Promise<Alerta> {
+  const sugerencia = sugerenciasAlerta(vehiculo.categoria, vehiculo.combustible).find(
+    (s) => s.clave === clave,
+  );
+  if (!sugerencia) throw new Error(`El catálogo no tiene «${clave}» para ${vehiculo.alias}`);
+  return repo.alertas.crear({ ...alertaDesdeSugerencia(vehiculo.id, sugerencia), ...extra });
+}
+
+/**
+ * Un servicio del histórico, que reinicia las alertas que cubre.
+ *
+ * Es lo mismo que hace `guardarMantenimiento`, pero sobre el repositorio que
+ * se le pasa: la semilla también rellena bases de prueba, no solo la global.
+ */
+async function servicio(repo: Repositorio, datos: Nuevo<Mantenimiento>): Promise<void> {
+  await repo.mantenimientos.crear(datos);
+  for (const alertaId of datos.alertaIds) {
+    const alerta = await repo.alertas.obtener(alertaId);
+    if (alerta && (!alerta.ultimaFecha || alerta.ultimaFecha <= datos.fecha)) {
+      await repo.alertas.actualizar(alertaId, {
+        ultimaFecha: datos.fecha,
+        ...(datos.km !== undefined ? { ultimoKm: datos.km } : {}),
+      });
+    }
+  }
+}
+
 export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
   const hoy = hoyISO();
 
@@ -227,7 +264,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 0,
   });
-  await crearReglasPorDefecto(golf, repo);
 
   await repo.lecturas.crear({
     vehiculoId: golf.id,
@@ -260,78 +296,87 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
   const kmGolf = hitos(repostajesGolf, { fecha: '2019-04-12', km: 18400 });
   const enFechaGolf = (fecha: FechaISO): number => enFecha(kmGolf, fecha);
 
-  // Mantenimientos pasados. El aceite es el que vence pronto: la regla es
-  // cada 15.000 km o 12 meses, y de esto hace once.
+  /*
+   * Alertas, elegidas como lo haría el usuario al dar de alta el coche. Las
+   * fechas cubren los tres colores del semáforo y los dos casos especiales:
+   * un servicio que reinicia dos alertas a la vez, y una alerta de la que no
+   * se sabe la última vez.
+   */
+  const golfRevision = await alertaSugerida(repo, golf, 'revision');
+  const golfAceite = await alertaSugerida(repo, golf, 'aceite');
+  const golfFiltros = await alertaSugerida(repo, golf, 'filtros');
+  const golfNeumaticos = await alertaSugerida(repo, golf, 'neumaticos');
+  const golfFrenos = await alertaSugerida(repo, golf, 'frenos');
+  const golfBateria = await alertaSugerida(repo, golf, 'bateria');
+  // La correa no se ha cambiado nunca: la alerta pide la última vez.
+  await alertaSugerida(repo, golf, 'distribucion');
+
+  // El aceite es el que vence pronto: cada 15.000 km o 12 meses, y de esto
+  // hace once.
   const fechaAceite = sumarMeses(hoy, -11);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: golf.id,
-    tipo: 'aceite',
+    titulo: 'Cambio de aceite',
+    alertaIds: [golfAceite.id],
     fecha: fechaAceite,
     km: enFechaGolf(fechaAceite),
     taller: 'Talleres Muñoz',
     costeCentimos: euros(96.4),
-    piezas: ['Aceite 5W30 5 l', 'Filtro de aceite'],
+    notas: 'Aceite 5W30 5 l y filtro de aceite.',
     adjuntoIds: [],
   });
 
   const fechaNeumaticos = sumarMeses(hoy, -8);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: golf.id,
-    tipo: 'neumaticos',
+    titulo: 'Neumáticos',
+    alertaIds: [golfNeumaticos.id],
     fecha: fechaNeumaticos,
     km: enFechaGolf(fechaNeumaticos),
     taller: 'Norauto Las Rozas',
     costeCentimos: euros(412),
-    piezas: ['4× Michelin Primacy 4 205/55 R16'],
-    notas: 'Alineación incluida.',
+    notas: '4× Michelin Primacy 4 205/55 R16. Alineación incluida.',
     adjuntoIds: [],
   });
 
+  // Un solo servicio que deja a cero dos alertas: la revisión anual del
+  // taller incluye los filtros.
   const fechaRevision = sumarMeses(hoy, -5);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: golf.id,
-    tipo: 'revision_general',
+    titulo: 'Revisión anual',
+    alertaIds: [golfRevision.id, golfFiltros.id],
     fecha: fechaRevision,
     km: enFechaGolf(fechaRevision),
     taller: 'Talleres Muñoz',
-    costeCentimos: euros(184.9),
-    piezas: ['Filtro de habitáculo', 'Filtro de aire'],
+    costeCentimos: euros(247.2),
+    notas: 'Incluye filtro de habitáculo y filtro de aire.',
     adjuntoIds: [],
   });
 
   const fechaFrenos = sumarMeses(hoy, -2);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: golf.id,
-    tipo: 'frenos',
+    titulo: 'Frenos',
+    alertaIds: [golfFrenos.id],
     fecha: fechaFrenos,
     km: enFechaGolf(fechaFrenos),
     taller: 'Talleres Muñoz',
     costeCentimos: euros(268.5),
-    piezas: ['Pastillas delanteras', 'Discos delanteros'],
-    adjuntoIds: [],
-  });
-
-  const fechaFiltros = sumarMeses(hoy, -5);
-  await repo.mantenimientos.crear({
-    vehiculoId: golf.id,
-    tipo: 'filtros',
-    fecha: fechaFiltros,
-    km: enFechaGolf(fechaFiltros),
-    taller: 'Talleres Muñoz',
-    costeCentimos: euros(62.3),
-    piezas: ['Filtro de habitáculo', 'Filtro de aire'],
+    notas: 'Pastillas y discos delanteros.',
     adjuntoIds: [],
   });
 
   const fechaBateria = sumarMeses(hoy, -14);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: golf.id,
-    tipo: 'bateria',
+    titulo: 'Batería',
+    alertaIds: [golfBateria.id],
     fecha: fechaBateria,
     km: enFechaGolf(fechaBateria),
     taller: 'Norauto Las Rozas',
     costeCentimos: euros(118.5),
-    piezas: ['Batería 70 Ah AGM'],
+    notas: 'Batería 70 Ah AGM.',
     adjuntoIds: [],
   });
 
@@ -344,13 +389,27 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     origen: 'manual',
   });
 
-  // Documentos: uno vencido (rojo), uno próximo (ámbar), uno lejano (verde).
+  // Papeles con fecha: uno vencido (rojo), uno próximo (ámbar), uno lejano.
+  await alertaSugerida(repo, golf, 'itv', {
+    cadaMeses: 24,
+    ultimaFecha: sumarMeses(hoy, -23),
+    // Ya caducada: tiene que ser imposible no verlo en el panel.
+    venceEl: sumarDias(hoy, -6),
+  });
+  await alertaSugerida(repo, golf, 'seguro', {
+    ultimaFecha: sumarMeses(hoy, -11),
+    venceEl: sumarDias(hoy, 24),
+  });
+  await alertaSugerida(repo, golf, 'impuesto', {
+    venceEl: sumarDias(hoy, 168),
+    notas: 'Ayuntamiento de Las Rozas. Domiciliado.',
+  });
+
+  // Los papeles en sí: datos y archivos, sin fechas de aviso.
   await repo.documentos.crear({
     vehiculoId: golf.id,
     tipo: 'itv',
     fechaEmision: sumarMeses(hoy, -23),
-    // Ya caducada: tiene que ser imposible no verlo en el panel.
-    fechaVencimiento: sumarDias(hoy, -6),
     estacion: 'ITV Collado Villalba',
     resultado: 'favorable',
     adjuntoIds: [],
@@ -364,14 +423,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     franquiciaCentimos: euros(300),
     primaCentimos: euros(486.2),
     fechaEmision: sumarMeses(hoy, -11),
-    fechaVencimiento: sumarDias(hoy, 24),
-    adjuntoIds: [],
-  });
-  await repo.documentos.crear({
-    vehiculoId: golf.id,
-    tipo: 'impuesto_circulacion',
-    fechaVencimiento: sumarDias(hoy, 168),
-    notas: 'Ayuntamiento de Las Rozas. Domiciliado.',
     adjuntoIds: [],
   });
   await repo.documentos.crear({
@@ -458,7 +509,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 1,
   });
-  await crearReglasPorDefecto(zoe, repo);
 
   await repo.lecturas.crear({
     vehiculoId: zoe.id,
@@ -490,61 +540,78 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
 
   const kmZoe = hitos(cargasZoe, { fecha: '2022-09-30', km: 12 });
 
+  const zoeRevision = await alertaSugerida(repo, zoe, 'revision');
+  const zoeFiltro = await alertaSugerida(repo, zoe, 'filtros');
+  const zoeNeumaticos = await alertaSugerida(repo, zoe, 'neumaticos');
+  const zoeBateria = await alertaSugerida(repo, zoe, 'bateria');
+  const zoeFrenos = await alertaSugerida(repo, zoe, 'frenos');
+
   const revisionZoe = sumarMeses(hoy, -9);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: zoe.id,
-    tipo: 'revision_general',
+    titulo: 'Revisión oficial',
+    alertaIds: [zoeRevision.id, zoeFiltro.id],
     fecha: revisionZoe,
     km: enFecha(kmZoe, revisionZoe),
     taller: 'Renault Alcobendas',
     costeCentimos: euros(148),
-    piezas: ['Filtro de habitáculo', 'Revisión de refrigeración de batería'],
+    notas: 'Filtro de habitáculo y revisión de la refrigeración de la batería.',
     adjuntoIds: [],
   });
 
   const neumaticosZoe = sumarMeses(hoy, -4);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: zoe.id,
-    tipo: 'neumaticos',
+    titulo: 'Neumáticos',
+    alertaIds: [zoeNeumaticos.id],
     fecha: neumaticosZoe,
     km: enFecha(kmZoe, neumaticosZoe),
     taller: 'Confortauto',
     costeCentimos: euros(386),
-    piezas: ['4× Michelin e·Primacy 195/55 R16'],
+    notas: '4× Michelin e·Primacy 195/55 R16.',
     adjuntoIds: [],
   });
 
   const bateriaZoe = sumarMeses(hoy, -13);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: zoe.id,
-    tipo: 'bateria',
+    titulo: 'Batería de 12 V',
+    alertaIds: [zoeBateria.id],
     fecha: bateriaZoe,
     km: enFecha(kmZoe, bateriaZoe),
     taller: 'Renault Alcobendas',
     costeCentimos: euros(96),
-    piezas: ['Batería auxiliar de 12 V'],
     adjuntoIds: [],
   });
 
   const frenosZoe = sumarMeses(hoy, -6);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: zoe.id,
-    tipo: 'frenos',
+    titulo: 'Frenos',
+    alertaIds: [zoeFrenos.id],
     fecha: frenosZoe,
     km: enFecha(kmZoe, frenosZoe),
     taller: 'Confortauto',
     costeCentimos: euros(142),
-    piezas: ['Pastillas delanteras'],
-    notas: 'Duran mucho por la retención regenerativa.',
+    notas: 'Pastillas delanteras. Duran mucho por la retención regenerativa.',
     adjuntoIds: [],
+  });
+
+  // Primera ITV pasada hace poco: aún queda mucho. Verde.
+  await alertaSugerida(repo, zoe, 'itv', {
+    cadaMeses: 24,
+    ultimaFecha: sumarMeses(hoy, -10),
+    venceEl: sumarMeses(hoy, 14),
+  });
+  await alertaSugerida(repo, zoe, 'seguro', {
+    ultimaFecha: sumarMeses(hoy, -9),
+    venceEl: sumarMeses(hoy, 3),
   });
 
   await repo.documentos.crear({
     vehiculoId: zoe.id,
     tipo: 'itv',
     fechaEmision: sumarMeses(hoy, -10),
-    // Primera ITV pasada hace poco: aún queda mucho. Verde.
-    fechaVencimiento: sumarMeses(hoy, 14),
     estacion: 'ITV San Sebastián de los Reyes',
     resultado: 'favorable',
     adjuntoIds: [],
@@ -557,7 +624,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     cobertura: 'todo_riesgo',
     primaCentimos: euros(392.5),
     fechaEmision: sumarMeses(hoy, -9),
-    fechaVencimiento: sumarMeses(hoy, 3),
     adjuntoIds: [],
   });
 
@@ -611,7 +677,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estado: 'activo',
     orden: 2,
   });
-  await crearReglasPorDefecto(camper, repo);
 
   await repo.lecturas.crear({
     vehiculoId: camper.id,
@@ -623,7 +688,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
 
   /*
    * Solo 9 repostajes en dos años y medio: unos 5.000 km al año, casi todos en
-   * verano. Es justo el patrón que hace inútiles las reglas por kilómetros y
+   * verano. Es justo el patrón que hace inútiles las alertas por kilómetros y
    * obliga a que manden las de tiempo.
    */
   const repostajesCamper = generarRepostajes({
@@ -641,7 +706,7 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     estaciones: ['Repsol A-2', 'Cepsa Zaragoza', 'Área de servicio Somport', 'BP Jaca'],
     /*
      * Meses entre repostaje y repostaje, no semanas. Es lo que hace que sus
-     * mantenimientos venzan por tiempo: a este ritmo, una regla de «cada
+     * mantenimientos venzan por tiempo: a este ritmo, una alerta de «cada
      * 15.000 km» tardaría casi cuatro años en dispararse.
      */
     diasEntreMin: 45,
@@ -652,74 +717,94 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
 
   const kmCamper = hitos(repostajesCamper, { fecha: '2018-05-19', km: 8600 });
 
+  /*
+   * Una lista corta: la autocaravana solo lleva lo que de verdad se le hace.
+   * Es justo lo que el usuario echaba de menos: poder quedarse con las
+   * alertas que usa y no con un catálogo entero.
+   */
+  const camperSellado = await alertaSugerida(repo, camper, 'sellado_techo');
+  const camperGas = await alertaSugerida(repo, camper, 'instalacion_gas');
+  const camperAceite = await alertaSugerida(repo, camper, 'aceite');
+  const camperFiltros = await alertaSugerida(repo, camper, 'filtros');
+  const camperBateria = await alertaSugerida(repo, camper, 'bateria');
+
   // El sellado del techo es anual. Este se hizo hace catorce meses: vencido.
   const selladoCamper = sumarMeses(hoy, -14);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: camper.id,
-    tipo: 'sellado_techo',
+    titulo: 'Sellado del techo',
+    alertaIds: [camperSellado.id],
     fecha: selladoCamper,
     km: enFecha(kmCamper, selladoCamper),
     taller: 'Caravanas Pirineo',
     costeCentimos: euros(215),
-    piezas: ['Sikaflex 512', 'Revisión de claraboyas y juntas'],
-    notas: 'Repasadas las juntas de las dos claraboyas. Sin humedad detectada.',
+    notas: 'Sikaflex 512. Repasadas las juntas de las dos claraboyas, sin humedad.',
     adjuntoIds: [],
   });
 
   const gasCamper = sumarMeses(hoy, -50);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: camper.id,
-    tipo: 'instalacion_gas',
+    titulo: 'Revisión de la instalación de gas',
+    alertaIds: [camperGas.id],
     fecha: gasCamper,
     km: enFecha(kmCamper, gasCamper),
     taller: 'Caravanas Pirineo',
     costeCentimos: euros(92),
-    piezas: ['Certificado de revisión de instalación de gas'],
     adjuntoIds: [],
   });
 
   const aceiteCamper = sumarMeses(hoy, -16);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: camper.id,
-    tipo: 'aceite',
+    titulo: 'Cambio de aceite',
+    alertaIds: [camperAceite.id],
     fecha: aceiteCamper,
     km: enFecha(kmCamper, aceiteCamper),
     taller: 'Fiat Professional Huesca',
     costeCentimos: euros(178.4),
-    piezas: ['Aceite 5W30 7 l', 'Filtro de aceite', 'Filtro de combustible'],
+    notas: 'Aceite 5W30 7 l, filtro de aceite y filtro de combustible.',
     adjuntoIds: [],
   });
 
   const bateriaCamper = sumarMeses(hoy, -20);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: camper.id,
-    tipo: 'bateria',
+    titulo: 'Batería de servicio',
+    alertaIds: [camperBateria.id],
     fecha: bateriaCamper,
     km: enFecha(kmCamper, bateriaCamper),
     taller: 'Caravanas Pirineo',
     costeCentimos: euros(214),
-    piezas: ['Batería de servicio AGM 100 Ah'],
-    notas: 'La de servicio, no la del motor.',
+    notas: 'AGM 100 Ah. La de servicio, no la del motor.',
     adjuntoIds: [],
   });
 
   const filtrosCamper = sumarMeses(hoy, -13);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: camper.id,
-    tipo: 'filtros',
+    titulo: 'Filtros',
+    alertaIds: [camperFiltros.id],
     fecha: filtrosCamper,
     km: enFecha(kmCamper, filtrosCamper),
     taller: 'Fiat Professional Huesca',
     costeCentimos: euros(84),
-    piezas: ['Filtro de habitáculo', 'Filtro de aire'],
     adjuntoIds: [],
+  });
+
+  await alertaSugerida(repo, camper, 'itv', {
+    ultimaFecha: sumarMeses(hoy, -12),
+    venceEl: sumarMeses(hoy, 12),
+  });
+  await alertaSugerida(repo, camper, 'seguro', {
+    ultimaFecha: sumarMeses(hoy, -7),
+    venceEl: sumarMeses(hoy, 5),
   });
 
   await repo.documentos.crear({
     vehiculoId: camper.id,
     tipo: 'itv',
     fechaEmision: sumarMeses(hoy, -12),
-    fechaVencimiento: sumarMeses(hoy, 12),
     estacion: 'ITV Huesca',
     resultado: 'favorable',
     adjuntoIds: [],
@@ -733,7 +818,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     franquiciaCentimos: euros(600),
     primaCentimos: euros(741.9),
     fechaEmision: sumarMeses(hoy, -7),
-    fechaVencimiento: sumarMeses(hoy, 5),
     adjuntoIds: [],
   });
 
@@ -799,7 +883,6 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
     notas: 'Vendido a un particular por Wallapop. Aguantó hasta el final.',
     orden: 3,
   });
-  await crearReglasPorDefecto(ibiza, repo);
 
   await repo.lecturas.crear({
     vehiculoId: ibiza.id,
@@ -829,27 +912,29 @@ export async function cargarDatosEjemplo(repo: Repositorio): Promise<void> {
 
   const kmIbiza = hitos(repostajesIbiza, { fecha: '2013-06-02', km: 62000 });
 
+  // Vendido: su histórico sigue ahí, pero no lleva alertas.
   const aceiteIbiza = sumarMeses(fechaVenta, -4);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: ibiza.id,
-    tipo: 'aceite',
+    titulo: 'Cambio de aceite',
+    alertaIds: [],
     fecha: aceiteIbiza,
     km: enFecha(kmIbiza, aceiteIbiza),
     taller: 'Taller del barrio',
     costeCentimos: euros(72),
-    piezas: ['Aceite 10W40 4 l', 'Filtro de aceite'],
+    notas: 'Aceite 10W40 4 l y filtro de aceite.',
     adjuntoIds: [],
   });
 
   const bateriaIbiza = sumarMeses(fechaVenta, -2);
-  await repo.mantenimientos.crear({
+  await servicio(repo, {
     vehiculoId: ibiza.id,
-    tipo: 'bateria',
+    titulo: 'Batería',
+    alertaIds: [],
     fecha: bateriaIbiza,
     km: enFecha(kmIbiza, bateriaIbiza),
     taller: 'Norauto Getafe',
     costeCentimos: euros(94.9),
-    piezas: ['Batería 60 Ah'],
     adjuntoIds: [],
   });
 

@@ -5,10 +5,12 @@ import { formatearDistancia, formatearMes, hoyISO, claveMes } from '@/dominio/fe
 import { formatearConsumo, formatearKm } from '@/dominio/formato.ts';
 import { esEstimacion } from '@/dominio/odometro.ts';
 import type { Vehiculo } from '@/dominio/tipos.ts';
+import type { Vencimiento } from '@/dominio/vencimientos.ts';
 import { Boton, EnlaceBoton } from '../componentes/Boton.tsx';
 import { FormularioLectura } from '../componentes/FormularioLectura.tsx';
 import { FotoVehiculo } from '../componentes/FotoVehiculo.tsx';
 import { ListaVencimientos } from '../componentes/ListaVencimientos.tsx';
+import { HojaAlerta } from '../componentes/HojaAlerta.tsx';
 import { HojaModal } from '../componentes/HojaModal.tsx';
 import { useResumenPanel, usePuntosOdometro } from '../ganchos/consultas.ts';
 import type { ResumenPanel } from '../ganchos/consultas.ts';
@@ -54,9 +56,11 @@ function HojaLectura({
 function TarjetaPanel({
   resumen,
   alRegistrarKm,
+  alElegirAlerta,
 }: {
   resumen: ResumenPanel;
   alRegistrarKm: () => void;
+  alElegirAlerta: (v: Vencimiento) => void;
 }): React.JSX.Element {
   const { vehiculo, estimacion, kmAlAnio, gastoDelMesCentimos, registrosDelMes, vencimientos } =
     resumen;
@@ -123,9 +127,9 @@ function TarjetaPanel({
 
       <section className="panel-tarjeta__vencimientos">
         {vencimientos.total === 0 ? (
-          <p className="panel-tarjeta__pendiente">
-            Sin reglas ni documentos con fecha. Añádelos desde la ficha del vehículo.
-          </p>
+          <Link to={`/vehiculos/${vehiculo.id}`} className="panel-tarjeta__pendiente">
+            Sin alertas todavía. Añade la ITV, el seguro o la revisión desde la ficha ›
+          </Link>
         ) : vencimientos.destacados.length === 0 ? (
           <p className="panel-tarjeta__aldia">
             <span className="etiqueta-semaforo es-ok">
@@ -134,11 +138,15 @@ function TarjetaPanel({
               </span>
               Al día
             </span>
-            Nada pendiente entre {vencimientos.total} revisiones y documentos.
+            Nada pendiente entre sus {vencimientos.total} alertas.
           </p>
         ) : (
           <>
-            <ListaVencimientos vencimientos={vencimientos.destacados} compacta />
+            <ListaVencimientos
+              vencimientos={vencimientos.destacados}
+              compacta
+              alElegir={alElegirAlerta}
+            />
             {restantes > 0 ? (
               <Link to={`/vehiculos/${vehiculo.id}`} className="panel-tarjeta__mas">
                 {restantes === 1 ? 'Ver 1 más' : `Ver ${restantes} más`}
@@ -168,6 +176,7 @@ function TarjetaPanel({
 export function Panel(): React.JSX.Element {
   const resumenes = useResumenPanel();
   const [registrando, setRegistrando] = useState<Vehiculo | null>(null);
+  const [alerta, setAlerta] = useState<Vencimiento | null>(null);
 
   return (
     <div className="contenedor panel">
@@ -208,12 +217,18 @@ export function Panel(): React.JSX.Element {
               key={resumen.vehiculo.id}
               resumen={resumen}
               alRegistrarKm={() => setRegistrando(resumen.vehiculo)}
+              alElegirAlerta={setAlerta}
             />
           ))}
         </div>
       )}
 
       <HojaLectura vehiculo={registrando} alCerrar={() => setRegistrando(null)} />
+      <HojaAlerta
+        alertaId={alerta?.alertaId ?? null}
+        titulo={alerta?.titulo ?? 'Alerta'}
+        alCerrar={() => setAlerta(null)}
+      />
     </div>
   );
 }

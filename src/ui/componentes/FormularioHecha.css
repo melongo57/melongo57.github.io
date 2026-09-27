@@ -1,0 +1,15 @@
+.form-hecha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.form-hecha__proxima {
+  padding: var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--c-acento-suave);
+  border: 1px solid var(--c-acento-borde);
+  color: var(--c-acento);
+  font-size: var(--t-sm);
+  font-weight: 650;
+}

@@ -1,6 +1,7 @@
-import { plantillaReglas } from '@/dominio/catalogos.ts';
+import { sugerenciasAlerta, type SugerenciaAlerta } from '@/dominio/catalogos.ts';
 import type {
   Adjunto,
+  Alerta,
   Cambios,
   Documento,
   FechaISO,
@@ -9,9 +10,7 @@ import type {
   LecturaOdometro,
   Mantenimiento,
   Nuevo,
-  ReglaMantenimiento,
   Repostaje,
-  TipoMantenimiento,
   Vehiculo,
 } from '@/dominio/tipos.ts';
 import { prepararAdjunto } from './imagenes.ts';
@@ -22,27 +21,47 @@ import type { Repositorio } from './repositorio.ts';
  * Operaciones de escritura que abarcan más de una tabla.
  *
  * Los componentes llaman aquí y no al repositorio directamente: dar de alta un
- * vehículo no es escribir una fila, es escribir la fila más sus reglas de
+ * vehículo no es escribir una fila, es escribir la fila más sus alertas de
  * mantenimiento más su primera lectura de odómetro. Si eso viviera en el
  * formulario, el segundo sitio que cree vehículos (la importación de JSON, en
  * la fase 7) se dejaría la mitad.
  */
 
-/** Crea las reglas de recurrencia que corresponden a la categoría y el combustible. */
-export async function crearReglasPorDefecto(
+/** Datos de una alerta nueva a partir de una sugerencia del catálogo. */
+export function alertaDesdeSugerencia(
+  vehiculoId: Id,
+  sugerencia: SugerenciaAlerta,
+): Nuevo<Alerta> {
+  return {
+    vehiculoId,
+    nombre: sugerencia.nombre,
+    icono: sugerencia.icono,
+    apunte: sugerencia.apunte,
+    ...(sugerencia.cadaKm !== undefined ? { cadaKm: sugerencia.cadaKm } : {}),
+    ...(sugerencia.cadaMeses !== undefined ? { cadaMeses: sugerencia.cadaMeses } : {}),
+    ...(sugerencia.avisoKm !== undefined ? { avisoKm: sugerencia.avisoKm } : {}),
+    ...(sugerencia.avisoDias !== undefined ? { avisoDias: sugerencia.avisoDias } : {}),
+  };
+}
+
+/**
+ * Crea las alertas elegidas de entre las sugerencias del vehículo.
+ *
+ * Sin `claves`, las básicas. Se crean UNA vez, al dar de alta: a partir de ahí
+ * son del usuario. La versión anterior las regeneraba cada vez que se abría
+ * el editor, así que borrar una que sobraba no servía de nada.
+ */
+export async function crearAlertasSugeridas(
   vehiculo: Vehiculo,
+  claves?: readonly string[],
   destino: Repositorio = repo,
 ): Promise<void> {
-  const plantilla = plantillaReglas(vehiculo.categoria, vehiculo.combustible);
-  for (const [tipo, regla] of Object.entries(plantilla)) {
-    if (!regla) continue;
-    await destino.reglas.crear({
-      vehiculoId: vehiculo.id,
-      tipo: tipo as TipoMantenimiento,
-      ...(regla.cadaKm !== undefined ? { cadaKm: regla.cadaKm } : {}),
-      ...(regla.cadaMeses !== undefined ? { cadaMeses: regla.cadaMeses } : {}),
-      activa: true,
-    });
+  const sugerencias = sugerenciasAlerta(vehiculo.categoria, vehiculo.combustible);
+  const elegidas = claves
+    ? sugerencias.filter((s) => claves.includes(s.clave))
+    : sugerencias.filter((s) => s.basica);
+  for (const sugerencia of elegidas) {
+    await destino.alertas.crear(alertaDesdeSugerencia(vehiculo.id, sugerencia));
   }
 }
 
@@ -55,13 +74,19 @@ export async function guardarAdjunto(archivo: File): Promise<Adjunto> {
 export interface DatosNuevoVehiculo extends Nuevo<Vehiculo> {
   /** Archivo elegido en el formulario. Se comprime y se guarda aparte. */
   foto?: File | null;
+  /** Claves de las sugerencias de alerta elegidas. Sin ellas, las básicas. */
+  alertas?: readonly string[];
 }
 
 /**
- * Alta completa de un vehículo: la ficha, sus reglas de mantenimiento y la
- * lectura inicial del odómetro si se han indicado kilómetros de compra.
+ * Alta completa de un vehículo: la ficha, sus alertas de partida y la lectura
+ * inicial del odómetro si se han indicado kilómetros de compra.
  */
-export async function crearVehiculo({ foto, ...datos }: DatosNuevoVehiculo): Promise<Vehiculo> {
+export async function crearVehiculo({
+  foto,
+  alertas,
+  ...datos
+}: DatosNuevoVehiculo): Promise<Vehiculo> {
   const orden = datos.orden ?? (await repo.vehiculos.contar());
 
   let fotoAdjuntoId: Id | undefined;
@@ -75,7 +100,7 @@ export async function crearVehiculo({ foto, ...datos }: DatosNuevoVehiculo): Pro
     ...(fotoAdjuntoId ? { fotoAdjuntoId } : {}),
   });
 
-  await crearReglasPorDefecto(vehiculo);
+  await crearAlertasSugeridas(vehiculo, alertas);
 
   // Sin esta lectura el vehículo nace sin histórico y el estimador no tiene de
   // dónde partir. Es el punto cero de todo lo demás.
@@ -173,12 +198,44 @@ export interface DatosMantenimiento extends Nuevo<Mantenimiento> {
   id?: Id;
 }
 
+/**
+ * Pone una alerta a cero a partir de un servicio hecho, si ese servicio es
+ * más reciente que su última vez.
+ *
+ * Lo de «más reciente» importa: registrar hoy una factura vieja de 2023 no
+ * puede hacer que el aceite cambiado la semana pasada parezca de hace dos
+ * años.
+ */
+async function reiniciarAlerta(alertaId: Id, fecha: FechaISO, km?: number): Promise<void> {
+  const alerta = await repo.alertas.obtener(alertaId);
+  if (!alerta) return;
+  if (alerta.ultimaFecha && alerta.ultimaFecha > fecha) return;
+  await repo.alertas.actualizar(alertaId, {
+    ultimaFecha: fecha,
+    ultimoKm: km,
+    // La fecha fija era la del ciclo que se acaba de cerrar.
+    venceEl: undefined,
+  });
+}
+
+/**
+ * Guarda un servicio y reinicia las alertas que cubre.
+ *
+ * Borrarlo o editarlo NO deshace ese reinicio: la «última vez» es un dato de
+ * la alerta que el usuario puede corregir a mano, y adivinar a qué valor
+ * volver (¿al servicio anterior? ¿a lo que había escrito antes?) daría más
+ * sorpresas de las que ahorra.
+ */
 export async function guardarMantenimiento(datos: DatosMantenimiento): Promise<Mantenimiento> {
-  if (datos.id) {
-    const { id, ...cambios } = datos;
-    return repo.mantenimientos.actualizar(id, cambios);
+  const { id, ...resto } = datos;
+  const guardado = id
+    ? await repo.mantenimientos.actualizar(id, resto)
+    : await repo.mantenimientos.crear(resto);
+
+  for (const alertaId of guardado.alertaIds) {
+    await reiniciarAlerta(alertaId, guardado.fecha, guardado.km);
   }
-  return repo.mantenimientos.crear(datos);
+  return guardado;
 }
 
 export function borrarMantenimiento(id: Id): Promise<void> {
@@ -186,44 +243,67 @@ export function borrarMantenimiento(id: Id): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Reglas de recurrencia
+// Alertas
 // ---------------------------------------------------------------------------
 
-export function guardarRegla(
-  id: Id,
-  cambios: Partial<Nuevo<ReglaMantenimiento>>,
-): Promise<ReglaMantenimiento> {
-  return repo.reglas.actualizar(id, cambios);
+export function crearAlerta(datos: Nuevo<Alerta>): Promise<Alerta> {
+  return repo.alertas.crear(datos);
 }
 
-export function crearRegla(datos: Nuevo<ReglaMantenimiento>): Promise<ReglaMantenimiento> {
-  return repo.reglas.crear(datos);
+export function guardarAlerta(id: Id, cambios: Cambios<Alerta>): Promise<Alerta> {
+  return repo.alertas.actualizar(id, cambios);
 }
 
-export function borrarRegla(id: Id): Promise<void> {
-  return repo.reglas.borrar(id);
+export function borrarAlerta(id: Id): Promise<void> {
+  return repo.alertas.borrar(id);
+}
+
+export interface DatosHecha {
+  fecha: FechaISO;
+  km?: number;
+  costeCentimos: number;
+  taller?: string;
+  notas?: string;
 }
 
 /**
- * Reglas del vehículo, completadas con las que faltan de su plantilla.
+ * Marca una alerta como hecha: el gesto más frecuente de la app, así que es
+ * una sola llamada.
  *
- * Un vehículo dado de alta antes de que existiera un tipo de mantenimiento
- * —o al que se le cambia la categoría— se quedaría sin esa regla para
- * siempre. Esto la crea al vuelo la primera vez que se abre el editor.
+ * Reinicia la alerta y deja constancia en el histórico. Si es una alerta de
+ * mantenimiento, siempre como servicio —aunque no haya coste, la entrada
+ * sirve de registro de que se hizo—. Si es un papel (seguro, ITV, impuesto)
+ * el coste va a gastos con su categoría, y solo si lo hay: una ITV pasada sin
+ * anotar lo que costó no necesita una fila de 0 €.
  */
-export async function completarReglas(vehiculo: Vehiculo): Promise<void> {
-  const existentes = await repo.reglas.listarPorVehiculo(vehiculo.id);
-  const yaTiene = new Set(existentes.filter((r) => r.tipo !== 'otro').map((r) => r.tipo));
+export async function marcarHecha(alerta: Alerta, datos: DatosHecha): Promise<void> {
+  if (alerta.apunte === 'mantenimiento') {
+    await guardarMantenimiento({
+      vehiculoId: alerta.vehiculoId,
+      titulo: alerta.nombre,
+      alertaIds: [alerta.id],
+      fecha: datos.fecha,
+      ...(datos.km !== undefined ? { km: datos.km } : {}),
+      ...(datos.taller?.trim() ? { taller: datos.taller.trim() } : {}),
+      costeCentimos: datos.costeCentimos,
+      ...(datos.notas?.trim() ? { notas: datos.notas.trim() } : {}),
+      adjuntoIds: [],
+    });
+    return;
+  }
 
-  const plantilla = plantillaReglas(vehiculo.categoria, vehiculo.combustible);
-  for (const [tipo, regla] of Object.entries(plantilla)) {
-    if (!regla || yaTiene.has(tipo as TipoMantenimiento)) continue;
-    await repo.reglas.crear({
-      vehiculoId: vehiculo.id,
-      tipo: tipo as TipoMantenimiento,
-      ...(regla.cadaKm !== undefined ? { cadaKm: regla.cadaKm } : {}),
-      ...(regla.cadaMeses !== undefined ? { cadaMeses: regla.cadaMeses } : {}),
-      activa: true,
+  await reiniciarAlerta(alerta.id, datos.fecha, datos.km);
+  if (datos.costeCentimos > 0) {
+    await repo.gastos.crear({
+      vehiculoId: alerta.vehiculoId,
+      categoria: alerta.apunte,
+      descripcion: alerta.nombre,
+      importeCentimos: datos.costeCentimos,
+      fecha: datos.fecha,
+      recurrente: false,
+      ...(datos.km !== undefined ? { km: datos.km } : {}),
+      ...(datos.notas?.trim() ? { notas: datos.notas.trim() } : {}),
+      adjuntoIds: [],
     });
   }
 }

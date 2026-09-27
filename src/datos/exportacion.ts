@@ -20,7 +20,12 @@ import { TABLAS_DATOS, type NombreTabla } from './db.ts';
  * copia que no se puede restaurar no es una copia.
  */
 
-export const VERSION_FORMATO = 1;
+/**
+ * 2 — alertas libres en vez de reglas por tipo. Una copia del formato 1 no se
+ * puede traer tal cual: sus mantenimientos no tienen título ni alertas, y sus
+ * reglas no encajan en ninguna tabla.
+ */
+export const VERSION_FORMATO = 2;
 
 export interface CopiaCompleta {
   formato: 'mi-garaje';
@@ -191,6 +196,13 @@ export function validarCopia(crudo: unknown): CopiaCompleta {
     throw new CopiaInvalida(
       `La copia es de una versión más nueva de la app (formato ${copia.version}, esta ` +
         `entiende hasta el ${VERSION_FORMATO}). Actualiza antes de importarla.`,
+    );
+  }
+
+  if (copia.version < VERSION_FORMATO) {
+    throw new CopiaInvalida(
+      'La copia es de una versión anterior de la app, de antes de las alertas nuevas, y ' +
+        'no se puede importar en esta.',
     );
   }
 

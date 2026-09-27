@@ -120,11 +120,11 @@ describe('puntosOdometro', () => {
     });
     await repo.mantenimientos.crear({
       vehiculoId: v.id,
-      tipo: 'aceite',
+      titulo: 'Cambio de aceite',
+      alertaIds: [],
       fecha: '2026-03-01',
       km: 11500,
       costeCentimos: 9000,
-      piezas: [],
       adjuntoIds: [],
     });
     await repo.gastos.crear({
@@ -187,7 +187,13 @@ describe('eliminarVehiculo', () => {
     const otro = await crearVehiculo('Intacto');
 
     await repo.lecturas.crear({ vehiculoId: v.id, fecha: '2026-01-01', km: 1, origen: 'manual' });
-    await repo.reglas.crear({ vehiculoId: v.id, tipo: 'aceite', cadaKm: 15000, activa: true });
+    await repo.alertas.crear({
+      vehiculoId: v.id,
+      nombre: 'Cambio de aceite',
+      icono: '🛢️',
+      cadaKm: 15000,
+      apunte: 'mantenimiento',
+    });
     await repo.gastos.crear({
       vehiculoId: v.id,
       categoria: 'seguro',
@@ -207,7 +213,7 @@ describe('eliminarVehiculo', () => {
 
     expect(await repo.vehiculos.obtener(v.id)).toBeUndefined();
     expect(await repo.lecturas.listarPorVehiculo(v.id)).toHaveLength(0);
-    expect(await repo.reglas.listarPorVehiculo(v.id)).toHaveLength(0);
+    expect(await repo.alertas.listarPorVehiculo(v.id)).toHaveLength(0);
     expect(await repo.gastos.listarPorVehiculo(v.id)).toHaveLength(0);
     // El otro vehículo no se toca.
     expect(await repo.lecturas.listarPorVehiculo(otro.id)).toHaveLength(1);
@@ -237,10 +243,10 @@ describe('eliminarVehiculo', () => {
     await repo.vehiculos.actualizar(v.id, { fotoAdjuntoId: foto.id });
     await repo.mantenimientos.crear({
       vehiculoId: v.id,
-      tipo: 'frenos',
+      titulo: 'Frenos',
+      alertaIds: [],
       fecha: '2026-01-01',
       costeCentimos: 20000,
-      piezas: [],
       adjuntoIds: [factura.id],
     });
 
@@ -256,8 +262,8 @@ describe('ajustes', () => {
   it('crea los ajustes por defecto la primera vez', async () => {
     const ajustes = await repo.ajustes.obtener();
     expect(ajustes.tema).toBe('sistema');
-    expect(ajustes.antelacionDocumentoDias.itv).toBe(30);
-    expect(ajustes.antelacionMantenimiento.aceite.avisoKm).toBe(1000);
+    expect(ajustes.avisoDias).toBe(30);
+    expect(ajustes.avisoKm).toBe(1000);
   });
 
   it('guarda cambios parciales sin perder el resto', async () => {

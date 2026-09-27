@@ -104,3 +104,8 @@
   border-color: var(--c-alerta-borde);
   color: var(--c-alerta);
 }
+
+.form-vehiculo__ayuda {
+  font-size: var(--t-sm);
+  color: var(--c-texto-suave);
+}

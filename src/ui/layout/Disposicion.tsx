@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { AccionRapida } from '../componentes/AccionRapida.tsx';
 import { AvisoActualizacion } from '../componentes/AvisoActualizacion.tsx';
 import { AvisoInstalacion } from '../componentes/AvisoInstalacion.tsx';
 import { useAvisosAlArrancar } from '../componentes/AvisoNotificaciones.tsx';
@@ -81,6 +82,7 @@ export function Disposicion(): React.JSX.Element {
       </main>
 
       <Navegacion lugar="inferior" />
+      <AccionRapida />
       <div className="avisos-flotantes">
         <AvisoActualizacion />
         <AvisoInstalacion />

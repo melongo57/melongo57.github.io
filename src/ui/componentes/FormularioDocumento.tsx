@@ -7,7 +7,6 @@ import {
   opciones,
 } from '@/dominio/catalogos.ts';
 import { parsearImporte } from '@/dominio/dinero.ts';
-import { esFechaISO, sumarMeses } from '@/dominio/fechas.ts';
 import type {
   CoberturaSeguro,
   Documento,
@@ -57,10 +56,6 @@ export function FormularioDocumento({
 
   const [tipo, setTipo] = useState<TipoDocumento>(documento?.tipo ?? 'seguro');
   const [fechaEmision, setFechaEmision] = useState(documento?.fechaEmision ?? '');
-  const [fechaVencimiento, setFechaVencimiento] = useState(documento?.fechaVencimiento ?? '');
-  const [avisoDias, setAvisoDias] = useState(
-    documento?.avisoDias === undefined ? '' : String(documento.avisoDias),
-  );
   const [notas, setNotas] = useState(documento?.notas ?? '');
   const [adjuntoIds, setAdjuntoIds] = useState<Id[]>(documento?.adjuntoIds ?? []);
 
@@ -96,16 +91,7 @@ export function FormularioDocumento({
   const [borrandoConfirmado, setBorrandoConfirmado] = useState(false);
 
   const faltaCompania = tipo === 'seguro' && !compania.trim();
-  const vencimientoValido = !fechaVencimiento || esFechaISO(fechaVencimiento);
-  const valido = !faltaCompania && vencimientoValido;
-
-  /** Al poner la fecha de la última ITV, propone la próxima a dos años. */
-  function cambiarEmision(valor: string): void {
-    setFechaEmision(valor);
-    if (tipo === 'itv' && valor && !fechaVencimiento) {
-      setFechaVencimiento(sumarMeses(valor, 24));
-    }
-  }
+  const valido = !faltaCompania;
 
   async function guardar(): Promise<void> {
     if (!valido) {
@@ -117,8 +103,6 @@ export function FormularioDocumento({
     const comun = {
       vehiculoId: vehiculo.id,
       ...(fechaEmision ? { fechaEmision } : {}),
-      ...(fechaVencimiento ? { fechaVencimiento } : {}),
-      ...(avisoDias.trim() ? { avisoDias: Number(avisoDias) } : {}),
       ...(notas.trim() ? { notas: notas.trim() } : {}),
       adjuntoIds,
     };
@@ -230,26 +214,12 @@ export function FormularioDocumento({
         />
       ) : null}
 
-      <div className="rejilla-campos">
-        <CampoFecha
-          etiqueta={tipo === 'itv' ? 'Última inspección' : 'Fecha de emisión'}
-          valor={fechaEmision}
-          alCambiar={cambiarEmision}
-        />
-        <CampoFecha
-          etiqueta={tipo === 'itv' ? 'Próxima inspección' : 'Vence el'}
-          ayuda="Vacío: no caduca."
-          valor={fechaVencimiento}
-          alCambiar={setFechaVencimiento}
-        />
-        <CampoNumero
-          etiqueta="Avisar con"
-          ayuda="Vacío: el valor por defecto."
-          valor={avisoDias}
-          alCambiar={setAvisoDias}
-          sufijo="días"
-        />
-      </div>
+      <CampoFecha
+        etiqueta={tipo === 'itv' ? 'Fecha de la inspección' : 'Fecha de emisión'}
+        ayuda="Para el aviso de cuándo vence, crea una alerta en la ficha del vehículo."
+        valor={fechaEmision}
+        alCambiar={setFechaEmision}
+      />
 
       <Adjuntos ids={adjuntoIds} alCambiar={setAdjuntoIds} />
 

@@ -1,11 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  agruparPorMes,
-  generarIcs,
-  nombreArchivoIcs,
-  type EventoCalendario,
-} from '@/dominio/calendario.ts';
+import { agruparPorMes, generarIcs, nombreArchivoIcs } from '@/dominio/calendario.ts';
 import {
   formatearDistancia,
   formatearFecha,
@@ -19,12 +14,6 @@ import './Agenda.css';
 
 /** Hasta dónde llega la agenda antes de pedir «ver todo». */
 const MESES_HORIZONTE = 14;
-
-const ICONO: Record<EventoCalendario['clase'], string> = {
-  mantenimiento: '🔧',
-  documento: '🗂️',
-  gasto: '💶',
-};
 
 /** Descarga un texto como archivo, sin pasar por ningún servidor. */
 function descargar(nombre: string, contenido: string, mime: string): void {
@@ -133,7 +122,7 @@ export function Agenda(): React.JSX.Element {
                       </span>
                       <span className="agenda-evento__cuerpo">
                         <span className="agenda-evento__titulo">
-                          <span aria-hidden="true">{ICONO[e.clase]} </span>
+                          <span aria-hidden="true">{e.icono} </span>
                           {e.titulo}
                         </span>
                         <span className="agenda-evento__meta numero">

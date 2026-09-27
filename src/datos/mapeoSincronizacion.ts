@@ -35,8 +35,15 @@ export function filaDesdeRegistro(
   registro: Record<string, unknown>,
   propietarioId: string,
   excluir: readonly string[] = [],
+  /**
+   * Campos que, si faltan, se mandan como NULL en vez de omitirse: un upsert
+   * que no menciona una columna la deja como estaba, así que omitirla no
+   * sirve para vaciarla.
+   */
+  anulables: readonly string[] = [],
 ): FilaSupabase {
   const fila: FilaSupabase = { propietario_id: propietarioId };
+  for (const clave of anulables) fila[aSnake(clave)] = null;
   for (const [clave, valor] of Object.entries(registro)) {
     if (clave === 'propietarioId' || excluir.includes(clave)) continue;
     if (valor === undefined) continue;
@@ -93,8 +100,6 @@ const CAMPOS_COMUNES_DOCUMENTO = new Set([
   'vehiculoId',
   'tipo',
   'fechaEmision',
-  'fechaVencimiento',
-  'avisoDias',
   'notas',
   'adjuntoIds',
 ]);

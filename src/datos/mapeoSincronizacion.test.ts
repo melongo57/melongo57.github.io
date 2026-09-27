@@ -56,6 +56,17 @@ describe('filaDesdeRegistro / registroDesdeFila', () => {
     const fila = filaDesdeRegistro({ id: 'a', datos: 'blob-de-mentira' }, 'uid-1', ['datos']);
     expect('datos' in fila).toBe(false);
   });
+
+  it('manda NULL en los campos anulables que faltan, para poder vaciarlos', () => {
+    // Un upsert que no menciona una columna la deja como estaba: sin el NULL,
+    // marcar una alerta como hecha no borraría su fecha fija en el servidor.
+    const fila = filaDesdeRegistro({ id: 'a', cadaMeses: 12 }, 'uid-1', [], [
+      'venceEl',
+      'cadaMeses',
+    ]);
+    expect(fila.vence_el).toBeNull();
+    expect(fila.cada_meses).toBe(12);
+  });
 });
 
 describe('documentos: columnas comunes + detalle', () => {
@@ -133,6 +144,7 @@ describe('ajustes: fila única por usuario', () => {
     const reconstruido = ajustesDesdeFila(fila, 'ajustes', '2026-08-24T00:00:00Z');
     expect(reconstruido.id).toBe('ajustes');
     expect(reconstruido.tema).toBe(original.tema);
-    expect(reconstruido.antelacionMantenimiento).toEqual(original.antelacionMantenimiento);
+    expect(reconstruido.avisoDias).toBe(original.avisoDias);
+    expect(reconstruido.avisoKm).toBe(original.avisoKm);
   });
 });

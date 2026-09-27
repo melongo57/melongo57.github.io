@@ -68,8 +68,11 @@
 .contenido {
   flex: 1;
   padding-block: var(--e-5);
-  /* Hueco para que la barra inferior no tape el final de la página. */
-  padding-bottom: calc(var(--e-8) + var(--e-5) + var(--seguro-abajo));
+  /*
+   * Hueco para que ni la barra inferior ni el botón «＋» tapen el final de
+   * la página: lo último de la lista tiene que poder quedar por encima.
+   */
+  padding-bottom: calc(var(--e-8) + var(--e-8) + var(--e-3) + var(--seguro-abajo));
 }
 
 /* --------------------------------------------------------------------------
@@ -178,6 +181,6 @@
   }
 
   .contenido {
-    padding-bottom: var(--e-7);
+    padding-bottom: calc(var(--e-7) + var(--e-7));
   }
 }

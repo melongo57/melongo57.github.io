@@ -75,6 +75,19 @@ export function unirEnEspanol(partes: readonly string[]): string {
   return `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`;
 }
 
+/**
+ * Título de un servicio a partir de los nombres de sus alertas: «Cambio de
+ * aceite y filtros», no «… y Filtros». Las siglas («ITV») se quedan como están.
+ */
+export function tituloDeServicio(nombres: readonly string[]): string {
+  return unirEnEspanol(
+    nombres.map((n, i) => {
+      if (i === 0 || n.length < 2 || n[1] !== n[1]!.toLowerCase()) return n;
+      return n[0]!.toLowerCase() + n.slice(1);
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Lectura de lo que teclea el usuario
 // ---------------------------------------------------------------------------

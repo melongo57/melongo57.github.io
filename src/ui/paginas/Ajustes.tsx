@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { repo } from '@/datos/repositorioDexie.ts';
 import { cargarDatosEjemplo } from '@/datos/semilla.ts';
 import type { Tema } from '@/dominio/tipos.ts';
+import { AntelacionAvisos } from '../componentes/AntelacionAvisos.tsx';
 import { AvisoNotificaciones } from '../componentes/AvisoNotificaciones.tsx';
 import { Boton } from '../componentes/Boton.tsx';
 import { CopiaSeguridad } from '../componentes/CopiaSeguridad.tsx';
@@ -64,6 +65,7 @@ export function Ajustes(): React.JSX.Element {
 
       <section className="bloque">
         <h2 className="bloque__titulo">Avisos</h2>
+        <AntelacionAvisos />
         <AvisoNotificaciones />
       </section>
 

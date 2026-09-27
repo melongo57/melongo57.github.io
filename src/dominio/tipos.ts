@@ -167,53 +167,85 @@ export interface PuntoOdometro {
 }
 
 // ---------------------------------------------------------------------------
-// Mantenimiento
+// Alertas
 // ---------------------------------------------------------------------------
 
-export type TipoMantenimiento =
-  | 'aceite'
-  | 'filtros'
-  | 'neumaticos'
-  | 'frenos'
-  | 'distribucion'
-  | 'bateria'
-  | 'revision_general'
-  // Propios de autocaravanas y campers. El sellado del techo es el que de
-  // verdad importa: una filtración sin detectar se come la célula entera.
-  | 'sellado_techo'
-  | 'instalacion_gas'
-  | 'otro';
+/**
+ * Dónde se apunta el coste cuando una alerta se marca como hecha.
+ *
+ * Una revisión es un mantenimiento; renovar el seguro o pasar la ITV es un
+ * gasto de su categoría. Sin esto, el coste por categoría mezclaría la prima
+ * del seguro con los cambios de aceite.
+ */
+export type ApunteAlerta = 'mantenimiento' | CategoriaGasto;
 
+/**
+ * Algo que hay que hacer cada cierto tiempo o cada ciertos kilómetros.
+ *
+ * Es la pieza central de la app: la ITV, el seguro, el cambio de aceite o el
+ * «servicio anual Audi» son todos alertas, con el nombre que el usuario
+ * quiera. No hay tipos fijos a propósito: un servicio oficial ya incluye
+ * aceite y filtros, y obligar a separarlos en dos avisos (como hacía la
+ * versión anterior, con un catálogo cerrado que además se regeneraba solo)
+ * duplicaba avisos que el usuario no podía quitar.
+ *
+ * LA ALERTA GUARDA SU PROPIA «ÚLTIMA VEZ». No se deduce buscando en el
+ * histórico de mantenimientos por tipo: al marcarla como hecha se actualiza
+ * aquí, y el usuario la puede corregir a mano. Así una alerta recién creada
+ * pregunta «¿cuándo fue la última vez?» en lugar de anunciar «sin registrar».
+ */
+export interface Alerta extends EntidadBase {
+  vehiculoId: Id;
+  nombre: string;
+  /** Emoji que la identifica en las listas. */
+  icono: string;
+
+  /** Se repite cada tantos kilómetros. */
+  cadaKm?: number;
+  /** Se repite cada tantos meses. */
+  cadaMeses?: number;
+  /**
+   * Fecha exacta del próximo vencimiento. Manda sobre el cálculo por meses:
+   * sirve para la ITV (la fecha va en la pegatina) o un seguro que vence un
+   * día concreto. Se borra al marcar la alerta como hecha.
+   */
+  venceEl?: FechaISO;
+
+  /** Cuándo se hizo por última vez. Punto de partida del cálculo. */
+  ultimaFecha?: FechaISO;
+  /** Con cuántos kilómetros se hizo por última vez. */
+  ultimoKm?: number;
+
+  /** Antelación del aviso. Si falta, la de Ajustes. */
+  avisoDias?: number;
+  avisoKm?: number;
+
+  apunte: ApunteAlerta;
+  notas?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimientos (servicios hechos)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un servicio que se hizo: la entrada del histórico con su fecha y su coste.
+ *
+ * Puede cubrir varias alertas a la vez —un servicio oficial reinicia la
+ * revisión, el aceite y los filtros de un golpe— o ninguna, si es una
+ * reparación suelta que no se repite.
+ */
 export interface Mantenimiento extends EntidadBase {
   vehiculoId: Id;
-  tipo: TipoMantenimiento;
-  /** Solo cuando `tipo === 'otro'`. Permite agrupar recurrencias propias. */
-  tipoPersonalizado?: string;
+  titulo: string;
+  /** Alertas que este servicio deja a cero. */
+  alertaIds: Id[];
   fecha: FechaISO;
   km?: number;
   taller?: string;
   costeCentimos: Centimos;
-  piezas: string[];
   notas?: string;
   adjuntoIds: Id[];
-}
-
-/**
- * Regla de recurrencia doble: cada X km O cada Y meses, lo que ocurra antes.
- * Es por vehículo, no global: el aceite de un diésel moderno aguanta 20.000 km
- * y el de una moto 5.000.
- */
-export interface ReglaMantenimiento extends EntidadBase {
-  vehiculoId: Id;
-  tipo: TipoMantenimiento;
-  tipoPersonalizado?: string;
-  /** Al menos uno de `cadaKm` / `cadaMeses` debe estar definido. */
-  cadaKm?: number;
-  cadaMeses?: number;
-  /** Antelación del aviso. Si no se indica, se usa la de Ajustes. */
-  avisoKm?: number;
-  avisoDias?: number;
-  activa: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,14 +322,18 @@ export type TipoDocumento =
   | 'ficha_tecnica'
   | 'otro';
 
+/**
+ * Un papel del vehículo: la póliza, el informe de la ITV, la ficha técnica.
+ *
+ * Solo guarda los datos y los archivos. Cuándo caduca y cuándo avisar es cosa
+ * de las alertas: tener la caducidad en dos sitios obligaba a mantenerlos
+ * sincronizados, y el aviso de la ITV salía de un formulario de documentos
+ * que nadie abre para eso.
+ */
 interface DocumentoBase extends EntidadBase {
   vehiculoId: Id;
-  /** En la ITV, la fecha de la última inspección. */
+  /** Fecha del papel: la de la inspección, la de emisión de la póliza. */
   fechaEmision?: FechaISO;
-  /** En la ITV, la fecha de la próxima. Vacío = documento sin caducidad. */
-  fechaVencimiento?: FechaISO;
-  /** Antelación del aviso en días. Si no se indica, se usa la de Ajustes. */
-  avisoDias?: number;
   adjuntoIds: Id[];
   notas?: string;
 }
@@ -354,21 +390,16 @@ export interface Adjunto extends EntidadBase {
 
 export type Tema = 'claro' | 'oscuro' | 'sistema';
 
-export interface AntelacionAviso {
-  avisoKm?: number;
-  avisoDias?: number;
-}
-
 export const ID_AJUSTES = 'ajustes';
 
 export interface Ajustes extends EntidadBase {
   id: typeof ID_AJUSTES;
   tema: Tema;
   vehiculoPorDefectoId?: Id;
-  /** Antelación por defecto de cada tipo de mantenimiento. */
-  antelacionMantenimiento: Record<TipoMantenimiento, AntelacionAviso>;
-  /** Antelación por defecto, en días, de cada tipo de documento. */
-  antelacionDocumentoDias: Record<TipoDocumento, number>;
+  /** Con cuántos días de antelación avisar, si la alerta no dice otra cosa. */
+  avisoDias: number;
+  /** Con cuántos kilómetros de antelación avisar, ídem. */
+  avisoKm: number;
   notificacionesActivadas: boolean;
   ultimaRevisionAvisos?: InstanteISO;
   /**

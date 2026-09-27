@@ -9,6 +9,7 @@ import {
   parsearDecimal,
   parsearKm,
   parsearPrecioUnitario,
+  tituloDeServicio,
   unirEnEspanol,
 } from './formato.ts';
 
@@ -115,5 +116,13 @@ describe('unirEnEspanol', () => {
     expect(unirEnEspanol(['aceite'])).toBe('aceite');
     expect(unirEnEspanol(['aceite', 'filtro'])).toBe('aceite y filtro');
     expect(unirEnEspanol(['aceite', 'filtro', 'bujías'])).toBe('aceite, filtro y bujías');
+  });
+});
+
+describe('tituloDeServicio', () => {
+  it('pasa a minúscula todo menos lo primero y las siglas', () => {
+    expect(tituloDeServicio(['Cambio de aceite', 'Filtros'])).toBe('Cambio de aceite y filtros');
+    expect(tituloDeServicio(['Frenos', 'ITV', 'Neumáticos'])).toBe('Frenos, ITV y neumáticos');
+    expect(tituloDeServicio(['ITV'])).toBe('ITV');
   });
 });

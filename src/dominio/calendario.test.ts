@@ -34,26 +34,29 @@ function vehiculo(cambios: Partial<Vehiculo> = {}): Vehiculo {
 
 function vencimiento(cambios: Partial<Vencimiento> = {}): Vencimiento {
   return {
-    id: 'doc:d1',
+    id: 'alerta:a1',
+    alertaId: 'a1',
     vehiculoId: 'v1',
     titulo: 'ITV',
-    origen: { clase: 'documento', documentoId: 'd1', tipo: 'itv' },
+    icono: '🔎',
     semaforo: 'proximo',
     fechaLimite: '2026-09-10',
     diasRestantes: 17,
     motivo: 'tiempo',
     urgencia: 17,
+    faltaUltimaVez: false,
     ...cambios,
   };
 }
 
 function evento(cambios: Partial<EventoCalendario> = {}): EventoCalendario {
   return {
-    uid: 'doc:d1@mi-garaje',
+    uid: 'alerta:a1@mi-garaje',
     fecha: '2026-09-10',
     titulo: 'ITV · El Golf',
     descripcion: 'Volkswagen Golf · 4821 KRT',
-    clase: 'documento',
+    clase: 'alerta',
+    icono: '🔎',
     vehiculoId: 'v1',
     vehiculoAlias: 'El Golf',
     avisoDias: 30,
@@ -70,7 +73,8 @@ describe('eventosDeVencimientos', () => {
 
     expect(e!.fecha).toBe('2026-09-10');
     expect(e!.titulo).toBe('ITV · El Golf');
-    expect(e!.uid).toBe('doc:d1@mi-garaje');
+    expect(e!.uid).toBe('alerta:a1@mi-garaje');
+    expect(e!.icono).toBe('🔎');
     expect(e!.diasRestantes).toBe(17);
   });
 
@@ -80,9 +84,9 @@ describe('eventosDeVencimientos', () => {
      * llevar al calendario. Para eso está el aviso dentro de la app.
      */
     const soloKm = vencimiento({
-      id: 'regla:r1',
+      id: 'alerta:a2',
+      alertaId: 'a2',
       titulo: 'Neumáticos',
-      origen: { clase: 'mantenimiento', reglaId: 'r1', tipo: 'neumaticos', sinRegistroPrevio: false },
       fechaLimite: undefined,
       diasRestantes: undefined,
       kmLimite: 140000,
@@ -93,23 +97,26 @@ describe('eventosDeVencimientos', () => {
     expect(eventosDeVencimientos(vehiculo(), [soloKm], { hoy: HOY })).toEqual([]);
   });
 
-  it('descarta lo que nunca se ha registrado', () => {
-    // Su fecha sale de la compra y no es creíble: llenaría la agenda de citas
-    // inventadas.
-    const sinRegistro = vencimiento({
-      id: 'regla:r2',
-      origen: { clase: 'mantenimiento', reglaId: 'r2', tipo: 'filtros', sinRegistroPrevio: true },
+  it('descarta las alertas a las que les falta la última vez', () => {
+    // Sin última vez no hay fecha creíble: el motor no les pone `fechaLimite`,
+    // y no deben llenar la agenda de citas inventadas.
+    const sinDato = vencimiento({
+      id: 'alerta:a3',
+      alertaId: 'a3',
+      fechaLimite: undefined,
+      diasRestantes: undefined,
+      faltaUltimaVez: true,
     });
 
-    expect(eventosDeVencimientos(vehiculo(), [sinRegistro], { hoy: HOY })).toEqual([]);
+    expect(eventosDeVencimientos(vehiculo(), [sinDato], { hoy: HOY })).toEqual([]);
   });
 
   it('mete los kilómetros en la descripción cuando también vence por ellos', () => {
     const doble = vencimiento({
-      id: 'regla:r3',
-      origen: { clase: 'mantenimiento', reglaId: 'r3', tipo: 'aceite', sinRegistroPrevio: false },
+      id: 'alerta:a4',
+      alertaId: 'a4',
       kmLimite: 140000,
-      desdeFecha: '2025-09-10',
+      ultimaFecha: '2025-09-10',
     });
 
     const [e] = eventosDeVencimientos(vehiculo(), [doble], { hoy: HOY });
@@ -319,8 +326,8 @@ describe('generarIcs', () => {
     const primera = generarIcs([evento()], { ahora: AHORA });
     const segunda = generarIcs([evento()], { ahora: new Date('2027-01-01T00:00:00Z') });
 
-    expect(primera).toContain('UID:doc:d1@mi-garaje');
-    expect(segunda).toContain('UID:doc:d1@mi-garaje');
+    expect(primera).toContain('UID:alerta:a1@mi-garaje');
+    expect(segunda).toContain('UID:alerta:a1@mi-garaje');
   });
 
   it('formatea el DTSTAMP en UTC sin milisegundos', () => {
